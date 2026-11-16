@@ -1,0 +1,191 @@
+.st {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- left: what is in effect right now ---------- */
+.st-side {
+  border-right: 1px solid var(--line);
+  padding: var(--s5) var(--s4) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-height: 0;
+}
+.st-side h2 {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.st-side__lead {
+  margin: 0;
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.st-side .facts {
+  grid-template-columns: 100px 1fr;
+}
+.st-ok {
+  color: var(--phosphor);
+}
+.st-data {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s1);
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+}
+.st-data code {
+  font-family: var(--font-data);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  word-break: break-all;
+}
+.st-side__end {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.st-side__end span {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+/* ---------- right: the switchboard ---------- */
+.st-main {
+  overflow-y: auto;
+  padding: var(--s4) var(--s6) var(--s7) var(--s5);
+}
+.st-main section {
+  max-width: 920px;
+  margin-top: var(--s5);
+}
+.st-main section:first-child {
+  margin-top: 0;
+}
+.st-main h3 {
+  margin: 0 0 var(--s1);
+  font-size: var(--fs-s);
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.st-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--line);
+}
+.st-main section .st-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.st-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 64ch;
+}
+.st-row__text b {
+  font-weight: 500;
+  color: var(--text-bright);
+  font-size: var(--fs-m);
+}
+.st-row__text span {
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.st-row__text code {
+  font-family: var(--font-data);
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+.st-row__text em {
+  font-style: normal;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  border-left: 2px solid var(--arc-dim);
+  padding-left: var(--s2);
+  margin-top: 2px;
+}
+.st-row__ctl {
+  display: flex;
+  gap: var(--s2);
+  justify-content: flex-end;
+}
+
+/* Relay-style switch: square throw, phosphor when live. */
+.st-switch {
+  width: 40px;
+  height: 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--graphite-0);
+  position: relative;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.st-switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  background: var(--text-faint);
+  transition: transform var(--t-fast) var(--ease-out), background var(--t-fast);
+}
+.st-switch:hover {
+  border-color: var(--arc);
+}
+.st-switch.is-on {
+  border-color: var(--phosphor-dim);
+  background: rgba(61, 255, 154, 0.08);
+}
+.st-switch.is-on i {
+  transform: translateX(20px);
+  background: var(--phosphor);
+  box-shadow: 0 0 8px var(--phosphor-glow);
+}
+.st-switch:focus-visible {
+  outline: 1px solid var(--arc);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-switch i {
+    transition: none;
+  }
+}
+.st-key {
+  display: flex;
+  gap: var(--s2);
+}
+.st-key .field {
+  width: 240px;
+}
+.st-update {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s2);
+  max-width: 420px;
+}
+.st-update p {
+  margin: 0;
+  font-size: var(--fs-s);
+  text-align: right;
+}
+.st-update pre {
+  margin: 0;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: var(--font-data);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}

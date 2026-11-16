@@ -1,0 +1,67 @@
+/* Ghost Monitor — "Optik Hücre" design tokens.
+   Colour is functional: phosphor = alive/healthy, arc = network/interactive,
+   signal = danger. Nothing is coloured for decoration. */
+
+:root {
+  /* surfaces */
+  --void: #080b0e;
+  --graphite-0: #0c1014;
+  --graphite-1: #10161b;
+  --graphite-2: #161e25;
+  --graphite-3: #1d2730;
+  --line: #22303a;
+  --line-strong: #2f414e;
+
+  /* text */
+  --text: #c5ced6;
+  --text-bright: #e8eef2;
+  --text-dim: #7a8894;
+  --text-faint: #4a5762;
+
+  /* functional accents */
+  --phosphor: #3dff9a;
+  --phosphor-dim: #1f7f52;
+  --phosphor-glow: rgba(61, 255, 154, 0.18);
+  --arc: #22b8ff;
+  --arc-dim: #145f86;
+  --arc-glow: rgba(34, 184, 255, 0.16);
+  --signal: #ff3d4e;
+  --signal-glow: rgba(255, 61, 78, 0.2);
+
+  /* severity scale */
+  --sev-info: #6f8796;
+  --sev-low: #22b8ff;
+  --sev-medium: #ffb547;
+  --sev-high: #ff7a3d;
+  --sev-critical: #ff3d4e;
+
+  /* type */
+  --font-ui: "IBM Plex Sans Condensed", "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+
+  /* modular scale 1.25 on 13px base */
+  --fs-xs: 10.5px;
+  --fs-s: 11.5px;
+  --fs-m: 13px;
+  --fs-l: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 25px;
+  --fs-3xl: 39px;
+  --fs-4xl: 61px;
+
+  /* spacing (4px grid) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --chrome-h: 40px;
+  --line-h: 34px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 120ms;
+  --t-med: 260ms;
+}

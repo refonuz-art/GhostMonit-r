@@ -1,0 +1,212 @@
+.tc {
+  display: grid;
+  grid-template-columns: minmax(360px, 40%) 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+.tc-head {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 260px 340px 1fr;
+  gap: var(--s5);
+  align-items: end;
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+.tc-level {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+}
+.tc-level b {
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  line-height: 1.05;
+  color: var(--lvl);
+}
+.tc-dist {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  height: 92px;
+}
+.tc-dist__col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 2px;
+  position: relative;
+  padding-bottom: 0;
+}
+.tc-dist__col i {
+  display: block;
+  background: var(--rk, var(--sev-info));
+  min-height: 2px;
+  opacity: 0.85;
+  order: 0;
+}
+.tc-dist__col b {
+  font-weight: 400;
+  font-size: var(--fs-m);
+  color: var(--text-bright);
+  text-align: left;
+  order: -1;
+}
+.tc-dist__col span {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  text-align: left;
+  border-top: 1px solid var(--line-strong);
+  padding-top: 2px;
+}
+.tc-dist__col.is-min span {
+  color: var(--text-bright);
+  border-top-color: var(--arc);
+}
+.risk-INFO { --rk: var(--sev-info); }
+.tc-policy {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+.tc-policy em {
+  font-style: normal;
+  color: var(--text-bright);
+}
+
+.tc-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+.tc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs);
+}
+.tc-cases {
+  overflow-y: auto;
+  flex: 1;
+}
+.case {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px var(--s3);
+  width: 100%;
+  text-align: left;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid rgba(34, 48, 58, 0.6);
+  box-shadow: inset 2px 0 0 transparent;
+  transition: background var(--t-fast);
+}
+.case:hover {
+  background: var(--graphite-1);
+}
+.case.is-on {
+  background: var(--graphite-2);
+  box-shadow: inset 2px 0 0 var(--rk);
+}
+.case .sev {
+  grid-row: 1 / 3;
+  align-self: center;
+}
+.case__t {
+  color: var(--text-bright);
+  font-size: var(--fs-m);
+}
+.case__e {
+  grid-column: 2;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.case__m {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.tc-detail {
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--s5) var(--s6);
+}
+.dossier-case {
+  max-width: 760px;
+}
+.dossier-case header h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 500;
+  color: var(--text-bright);
+  margin: var(--s2) 0 var(--s1);
+  line-height: 1.2;
+}
+.dossier-case header div {
+  font-size: var(--fs-xs);
+  word-break: break-all;
+  margin-bottom: var(--s4);
+}
+.dossier-case .evb__seg {
+  --evb: var(--rk);
+}
+.dossier-case section {
+  margin-top: var(--s5);
+}
+.dossier-case h3 {
+  margin: 0 0 var(--s2);
+  font-size: var(--fs-s);
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.affected {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  font-size: var(--fs-s);
+}
+.case-times {
+  font-size: var(--fs-xs);
+}
+
+.tc-rules h3 {
+  font-size: var(--fs-l);
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.tc-rules table {
+  border-collapse: collapse;
+  font-size: var(--fs-s);
+}
+.tc-rules td {
+  padding: 6px var(--s3) 6px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.tc-rules td:first-child {
+  color: var(--text-bright);
+  white-space: nowrap;
+}
+.tc-rules td:last-child {
+  color: var(--phosphor);
+  font-size: var(--fs-xs);
+}
+.tc-rules tr.is-off td {
+  color: var(--text-faint);
+}
