@@ -9,7 +9,6 @@
 - Geliştirme: `pnpm app:dev` (Vite 1420 + Tauri). Rust MSVC toolchain `src-tauri/rust-toolchain.toml` ile sabit.
 - Testler: `cd src-tauri && cargo test` (53 test; motor uçtan uca senaryoları, açılış yaşam döngüsü, canlı imza/TCP/hizmet/görev, DPAPI, PDF dahil) · `pnpm test` (vitest, 19 test; `state/explain.test.ts` Rust'taki her kural kimliğinin açıklaması olduğunu denetler)
 - Tip kontrol: `pnpm typecheck`
-- **Yayımlama:** `powershell -ExecutionPolicy Bypass -File scriptselease.ps1 -NotesFile docseleases\<sürüm>.md` — önce `tauri.conf.json`, `Cargo.toml`, `package.json` sürümünü artır. İmza anahtarı `%USERPROFILE%\.tauri\ghostmonitor-updater.key` (parola `.pw` dosyasında DPAPI ile şifreli). **Anahtar kaybolursa kurulu uygulamalar yeni sürümü kabul etmez** — yedekle.
 - Veri: `%APPDATA%\com.nexusghost.monitor\ghost.db` (SQLite), GeoIP: `...\geo\*.mmdb`
 - PDF'i incelemek için saklamak: `GM_PDF_OUT=<yol> cargo test pdf_survives`
 
