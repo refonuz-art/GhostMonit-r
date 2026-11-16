@@ -109,6 +109,138 @@ const RULES: Record<string, Omit<Explanation, "rule">> = {
     why: "Sürücünün kökünde bir kısayol var. Tek başına zararsız olabilir ama USB solucanlarının tipik izidir.",
     todo: "Kısayolun hedefine bakın. Tanımıyorsanız tıklamayın.",
   },
+  "ransom.canary": {
+    why: "Ghost Monitor'ün belge klasörlerine koyduğu tuzak dosyalardan biri değiştirildi, taşındı veya silindi. Bu dosyaları hiçbir normal program açmaz; dokunulması çoğu zaman bir programın klasördeki her dosyayı şifrelemeye başladığı anlamına gelir.",
+    todo: "Hemen Tehdit ekranındaki şüpheli işlemleri dondurun veya sonlandırın, ağ kablosunu çekin ya da Wi-Fi'yi kapatın. Bilgisayarı kapatmayın; önemli dosyalarınızın yedeğini kontrol edin.",
+  },
+  "ransom.rename_burst": {
+    why: "Saniyeler içinde çok sayıda belge, bilinmeyen bir uzantıyla yeniden adlandırıldı (ör. .docx → .docx.locked). Fidye yazılımları şifreledikleri dosyaları tam böyle yeniden adlandırır.",
+    todo: "Diske en çok yazan işlemi hemen dondurun. Toplu yeniden adlandırma yapan bir programı kendiniz çalıştırmadıysanız ağ bağlantısını kesin.",
+  },
+  "ransom.write_burst": {
+    why: "Belge klasörlerinizde saniyeler içinde çok sayıda dosya yeniden yazıldı. Yedekleme ve senkronizasyon programları da bunu yapabilir, ama fidye yazılımı belirtisi de olabilir.",
+    todo: "Şu anda dosyalarınızı işleyen bir program (yedekleme, fotoğraf düzenleme, senkronizasyon) yoksa listedeki işlemi dondurun.",
+  },
+  "ransom.suspects": {
+    why: "Alarm anında diske en çok yazan programlar. Bu liste bir kanıt değil, nereden başlayacağınızı gösteren bir ipucudur.",
+    todo: "Tanımadığınız bir program varsa önce dondurun; emin olunca sonlandırın.",
+  },
+  "ext.all_sites": {
+    why: "Bu uzantı ziyaret ettiğiniz her sitedeki içeriği okuyup değiştirebilir: şifre formları, banka sayfaları, e-postalar dahil.",
+    todo: "Uzantıyı gerçekten kullanıyor ve tanıyorsanız sorun yok. Tanımıyorsanız tarayıcının uzantılar sayfasından kaldırın.",
+  },
+  "ext.cookies": {
+    why: "Uzantı tarayıcı çerezlerini okuyabilir. Çerezler oturum bilgisi taşır; çalınırsa şifreniz olmadan hesabınıza girilebilir.",
+    todo: "Bu izne ihtiyaç duyan bir uzantı kullandığınızdan emin değilseniz kaldırın.",
+  },
+  "ext.debugger": {
+    why: "Uzantı sayfalara hata ayıklayıcı olarak bağlanabilir; bu, sayfadaki her şeyi okuyup değiştirmek demektir. Geliştirici araçları dışında nadiren gerekir.",
+    todo: "Geliştirici değilseniz bu uzantıyı kaldırın.",
+  },
+  "ext.native": {
+    why: "Uzantı bilgisayarınızdaki bir programla konuşabilir. Parola yöneticileri gibi meşru araçlar bunu kullanır, ama tarayıcı dışına çıkmanın bir yoludur.",
+    todo: "Eşlik eden programı tanıyorsanız sorun yok; tanımıyorsanız kaldırın.",
+  },
+  "ext.proxy": {
+    why: "Uzantı tarayıcınızın tüm trafiğini başka bir sunucu üzerinden geçirebilir. VPN uzantıları bunu yapar; zararlı uzantılar da trafiği dinlemek için kullanır.",
+    todo: "Bilinçli kurduğunuz bir VPN değilse kaldırın.",
+  },
+  "ext.webrequest": {
+    why: "Uzantı tarayıcının yaptığı ağ isteklerini yakalayıp değiştirebilir. Reklam engelleyiciler bunu kullanır.",
+    todo: "Tanıdığınız bir reklam engelleyici değilse uzantıyı gözden geçirin.",
+  },
+  "ext.management": {
+    why: "Uzantı diğer uzantıları açıp kapatabilir veya kaldırabilir.",
+    todo: "Bu izne nadiren ihtiyaç olur; tanımıyorsanız kaldırın.",
+  },
+  "ext.clipboard": {
+    why: "Uzantı panoya kopyaladığınız metni okuyabilir (kopyaladığınız şifreler ve kripto cüzdan adresleri dahil).",
+    todo: "Bu izni gerektiren bir özellik kullanmıyorsanız uzantıyı kaldırın.",
+  },
+  "ext.history": {
+    why: "Uzantı tarama geçmişinizin tamamını okuyabilir.",
+    todo: "Geçmiş yöneticisi gibi bir uzantı değilse gözden geçirin.",
+  },
+  "ext.unpacked": {
+    why: "Uzantı mağazadan değil, geliştirici modunda bir klasörden yüklenmiş. Zararlı programlar tarayıcıya bu yolla uzantı ekler.",
+    todo: "Kendiniz yüklemediyseniz kaldırın ve tarayıcıda geliştirici modunu kapatın.",
+  },
+  "ext.sideloaded": {
+    why: "Uzantı resmi mağaza dışından yüklenmiş. Şirket politikasıyla gelen uzantılar dışında bu alışılmadık bir durumdur.",
+    todo: "Kaynağını bilmiyorsanız kaldırın.",
+  },
+  "ext.new": {
+    why: "Bu uzantı son taramadan bu yana eklendi.",
+    todo: "Siz eklemediyseniz kaldırın; bir programın sizden habersiz uzantı kurduğu anlamına gelebilir.",
+  },
+  "net.hosts_redirect": {
+    why: "Windows'un hosts dosyası önemli bir siteyi (banka, e-posta, Microsoft vb.) farklı bir IP adresine yönlendiriyor. Adres çubuğunda doğru siteyi görseniz bile sahte bir sunucuya bağlanırsınız.",
+    todo: "Bu satırı siz eklemediyseniz hosts dosyasından silin ve bilgisayarı taratın. O sitelere bu arada giriş yapmayın.",
+  },
+  "net.hosts_block_av": {
+    why: "hosts dosyası antivirüs veya Windows güncelleme sitelerini engelliyor. Zararlı yazılımlar güncellenmeyi ve tespit edilmeyi önlemek için bunu yapar.",
+    todo: "Bu satırları hosts dosyasından silin ve tam tarama yapın.",
+  },
+  "net.dns_unknown": {
+    why: "Ağ bağdaştırıcınız tanınmayan bir DNS sunucusu kullanıyor. DNS, site adlarını adreslere çevirir; kötü niyetli bir DNS sizi sahte sitelere yönlendirebilir.",
+    todo: "Bu adresi siz veya internet sağlayıcınız ayarladıysa sorun yok. Değilse bağdaştırıcı ayarlarından DNS'i otomatiğe alın.",
+  },
+  "net.proxy_pac": {
+    why: "Tarayıcı trafiğinin nereye gideceğine bir otomatik yapılandırma betiği (PAC) karar veriyor. Şirket ağlarında normaldir; evde ise reklam yazılımlarının trafiği yönlendirme yöntemidir.",
+    todo: "Şirket bilgisayarı değilse Ayarlar → Ağ → Proxy bölümünden betiği kaldırın.",
+  },
+  "net.proxy": {
+    why: "İnternet trafiğiniz bir proxy sunucusu üzerinden geçiyor. Proxy, gidip gelen her şeyi görebilir.",
+    todo: "Bu proxy'yi siz ayarlamadıysanız Ayarlar → Ağ → Proxy bölümünden kapatın.",
+  },
+  "def.rtp_off": {
+    why: "Windows Defender'ın gerçek zamanlı koruması kapalı ve başka bir antivirüs de çalışmıyor. Zararlı dosyalar açıldıkları anda engellenmez.",
+    todo: "Windows Güvenliği → Virüs ve tehdit koruması'ndan gerçek zamanlı korumayı açın. Kendiliğinden kapanıyorsa bilgisayarı taratın.",
+  },
+  "def.no_av": {
+    why: "Windows'a kayıtlı hiçbir antivirüs etkin değil.",
+    todo: "Windows Güvenliği'ni açın veya kullandığınız antivirüsü etkinleştirin.",
+  },
+  "def.tamper_off": {
+    why: "Kurcalama koruması kapalı; programlar Defender ayarlarını sizden habersiz değiştirebilir.",
+    todo: "Windows Güvenliği → Virüs ve tehdit koruması ayarları → Kurcalama koruması'nı açın.",
+  },
+  "def.sig_old": {
+    why: "Defender'ın virüs tanımları bir haftadan eski; yeni tehditleri tanımayabilir.",
+    todo: "Windows Güvenliği → Koruma güncelleştirmeleri'nden güncelleyin.",
+  },
+  "def.exclusion_broad": {
+    why: "Defender'a bütün bir sürücüyü, kullanıcı klasörünü veya tüm .exe dosyalarını taramamasını söyleyen bir dışlama eklenmiş. Zararlı yazılımlar kendilerini gizlemek için bunu yapar.",
+    todo: "Bu dışlamayı siz eklemediyseniz Windows Güvenliği → Dışlamalar'dan hemen kaldırın ve tam tarama yapın.",
+  },
+  "def.exclusion_new": {
+    why: "Defender'a son kontrolden bu yana yeni bir dışlama eklendi.",
+    todo: "Siz eklemediyseniz kaldırın.",
+  },
+  "fw.off": {
+    why: "Windows Güvenlik Duvarı en az bir ağ profilinde kapalı; dışarıdan gelen bağlantılar süzülmüyor.",
+    todo: "Windows Güvenliği → Güvenlik duvarı ve ağ koruması'ndan açın.",
+  },
+  "evt.user_created": {
+    why: "Bilgisayarda yeni bir kullanıcı hesabı oluşturuldu. Saldırganlar kalıcı erişim için gizli hesaplar açar.",
+    todo: "Bu hesabı siz açmadıysanız Bilgisayar Yönetimi → Yerel Kullanıcılar'dan devre dışı bırakın.",
+  },
+  "evt.admin_added": {
+    why: "Bir hesap Yöneticiler grubuna eklendi; artık bilgisayar üzerinde tam yetkisi var.",
+    todo: "Bunu siz yapmadıysanız hesabı gruptan çıkarın ve şifrelerinizi değiştirin.",
+  },
+  "evt.log_cleared": {
+    why: "Windows olay günlüğü temizlendi. Saldırganlar izlerini silmek için bunu yapar; normal kullanımda nadiren olur.",
+    todo: "Günlüğü siz temizlemediyseniz bilgisayarı taratın ve diğer bulgulara dikkatle bakın.",
+  },
+  "evt.bruteforce": {
+    why: "Kısa sürede çok sayıda başarısız oturum açma denemesi oldu. Biri şifrenizi tahmin etmeye çalışıyor olabilir (özellikle Uzak Masaüstü açıksa).",
+    todo: "Kullanmıyorsanız Uzak Masaüstü'nü kapatın ve güçlü bir şifre kullanın. Kaynak IP'yi Sağlık → Engellenenler'den engelleyebilirsiniz.",
+  },
+  "lan.gateway_mac": {
+    why: "Modeminizin adresi farklı bir cihaza geçti. Modemi değiştirdiyseniz normaldir; değiştirmediyseniz ağdaki biri trafiğinizi kendi üzerinden geçiriyor olabilir (ARP zehirleme).",
+    todo: "Modemi değiştirmediyseniz ağdaki tanımadığınız cihazları kontrol edin ve şifre girmeden önce bağlantınızın güvenli olduğundan emin olun.",
+  },
 };
 
 export function explainSignals(signals: Signal[]): Explanation[] {

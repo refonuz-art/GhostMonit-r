@@ -1,7 +1,9 @@
 mod collectors;
 mod commands;
 mod commands_intel;
+mod commands_guard;
 mod engine;
+mod guard;
 mod intel;
 mod model;
 mod monitor;
@@ -27,6 +29,11 @@ use crate::state::Shared;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Called by the uninstaller: remove the ransomware decoys we planted, then exit.
+    if std::env::args().any(|a| a == "--cleanup") {
+        guard::canary::remove_all();
+        return;
+    }
     winapi::elevation::wait_for_predecessor();
     tauri::Builder::default()
         // Must be first: a second launch (e.g. shortcut while autostarted in tray) focuses us.
@@ -68,11 +75,14 @@ pub fn run() {
                 watch_findings: RwLock::new(Vec::new()),
                 auto_scans: RwLock::new(Vec::new()),
                 drives: RwLock::new(Vec::new()),
+                guard: RwLock::new(guard::GuardState::default()),
+                net_usage: RwLock::new(guard::netstats::NetUsage::default()),
             });
             app.manage(shared.clone());
             let tx = startup_scan::spawn(app.handle().clone(), shared.clone());
             *shared.startup_rescan.lock() = Some(tx);
             watchers::spawn(app.handle().clone(), shared.clone());
+            guard::spawn(app.handle().clone(), shared.clone());
             updater::spawn(app.handle().clone(), shared.clone());
             monitor::spawn(app.handle().clone(), shared.clone());
             shell::install_tray(app.handle())?;
@@ -120,6 +130,22 @@ pub fn run() {
             commands_intel::feed_update_now,
             updater::check_update,
             updater::install_update,
+            commands_guard::guard_state,
+            commands_guard::guard_refresh,
+            commands_guard::fw_rules,
+            commands_guard::fw_block,
+            commands_guard::fw_unblock,
+            commands_guard::quarantine_list,
+            commands_guard::quarantine_add,
+            commands_guard::quarantine_restore,
+            commands_guard::quarantine_delete,
+            commands_guard::remote_status,
+            commands_guard::remote_set_telegram,
+            commands_guard::remote_set_discord,
+            commands_guard::remote_test,
+            commands_guard::lan_sweep,
+            commands_guard::net_usage,
+            commands_guard::suspend_process,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ghost Monitor");

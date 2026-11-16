@@ -189,3 +189,19 @@
   font-size: var(--fs-xs);
   color: var(--text-dim);
 }
+
+.st-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s2);
+}
+.st-phone__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--fs-s);
+}
+.st-phone .st-key .field {
+  width: 150px;
+}

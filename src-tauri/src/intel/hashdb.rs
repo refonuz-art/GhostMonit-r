@@ -23,6 +23,9 @@ pub struct HashDbStats {
 pub fn import(conn: &Connection, path: &Path) -> Result<(u64, u64), String> {
     let source = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "içe aktarma".into());
     let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    if f.metadata().map(|m| m.len()).unwrap_or(0) > 2 * 1024 * 1024 * 1024 {
+        return Err("Dosya 2 GB'tan büyük; hash listesi olamayacak kadar büyük".into());
+    }
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
     let mut added = 0u64;
     let mut seen = 0u64;

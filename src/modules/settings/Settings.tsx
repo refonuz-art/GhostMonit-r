@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../../ipc/api";
+import { guard } from "../../ipc/guard";
 import { intel } from "../../ipc/intel";
 import { settingsApi, type AppSettings, type UpdateInfo } from "../../ipc/settings";
 import { on } from "../../ipc/api";
@@ -87,6 +88,83 @@ function FeedKey({ hasKey, onChange }: { hasKey: boolean; onChange: (v: boolean)
   );
 }
 
+
+/** Telegram bot / Discord webhook credentials, stored DPAPI-encrypted; never shown again. */
+function PhoneSetup({ status, onChange }: { status: { telegram: boolean; discord: boolean }; onChange: () => void }) {
+  const notify = useGhost((s) => s.notify);
+  const [token, setToken] = useState("");
+  const [chat, setChat] = useState("");
+  const [hook, setHook] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try {
+      await fn();
+      notify(ok);
+      onChange();
+    } catch (e) {
+      notify(String(e), "bad");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="st-phone">
+      {status.telegram ? (
+        <div className="st-phone__row">
+          <span className="st-ok">Telegram bağlı</span>
+          <button className="btn btn--quiet" onClick={() => run(() => guard.setTelegram(null, null), "Telegram bağlantısı silindi")}>
+            Kaldır
+          </button>
+        </div>
+      ) : (
+        <form
+          className="st-key"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => guard.setTelegram(token.trim(), chat.trim()), "Telegram şifrelenerek kaydedildi").then(() => {
+              setToken("");
+              setChat("");
+            });
+          }}
+        >
+          <input className="field" type="password" placeholder="Telegram bot anahtarı" value={token} onChange={(e) => setToken(e.target.value)} />
+          <input className="field" placeholder="Sohbet kimliği" value={chat} onChange={(e) => setChat(e.target.value)} />
+          <button className="btn" disabled={busy || !token.trim() || !chat.trim()}>
+            Kaydet
+          </button>
+        </form>
+      )}
+      {status.discord ? (
+        <div className="st-phone__row">
+          <span className="st-ok">Discord bağlı</span>
+          <button className="btn btn--quiet" onClick={() => run(() => guard.setDiscord(null), "Discord bağlantısı silindi")}>
+            Kaldır
+          </button>
+        </div>
+      ) : (
+        <form
+          className="st-key"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => guard.setDiscord(hook.trim()), "Discord şifrelenerek kaydedildi").then(() => setHook(""));
+          }}
+        >
+          <input className="field" type="password" placeholder="Discord webhook adresi" value={hook} onChange={(e) => setHook(e.target.value)} />
+          <button className="btn" disabled={busy || !hook.trim()}>
+            Kaydet
+          </button>
+        </form>
+      )}
+      {(status.telegram || status.discord) && (
+        <button className="btn" disabled={busy} onClick={() => run(() => guard.remoteTest(), "Test bildirimi gönderildi")}>
+          Test bildirimi gönder
+        </button>
+      )}
+    </div>
+  );
+}
+
 function UpdateBox({ current }: { current: string }) {
   const notify = useGhost((s) => s.notify);
   const [state, setState] = useState<"idle" | "checking" | "none" | "installing">("idle");
@@ -167,9 +245,12 @@ export default function Settings() {
   const [s, setS] = useState<AppSettings | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedKey, setFeedKey] = useState(false);
+  const [phone, setPhone] = useState({ telegram: false, discord: false });
+  const loadPhone = () => guard.remoteStatus().then(setPhone, () => {});
 
   useEffect(() => {
     intel.abuseHasKey().then(setFeedKey, () => {});
+    loadPhone();
     settingsApi.get().then(setS, (e) => notify(`Ayarlar okunamadı: ${e}`, "bad"));
   }, [notify]);
 
@@ -303,6 +384,54 @@ export default function Settings() {
           </Row>
           <Row title="USB sürücü izleme" hint="Takılan her sürücü kaydedilir; kökünde otomatik çalışan dosya veya program varsa işaretlenir.">
             <Switch label="USB izleme" on={s.usbWatch} onChange={(v) => save({ usbWatch: v })} />
+          </Row>
+        </section>
+
+        <section>
+          <h3>Koruma</h3>
+          <Row
+            title="Fidye yazılımı kalkanı"
+            hint="Belgeler, Masaüstü ve Resimler klasörlerine gizli tuzak dosyalar koyar ve bu klasörlerde saniyeler içinde çok sayıda dosyanın yeniden adlandırılmasını veya yeniden yazılmasını izler. Bir şey olursa diske en çok yazan programları gösterir; hiçbir şeyi kendiliğinden kapatmaz."
+            note="Kapatınca tuzak dosyalar silinir."
+          >
+            <Switch label="Fidye yazılımı kalkanı" on={s.ransomShield} onChange={(v) => save({ ransomShield: v })} />
+          </Row>
+          <Row
+            title="Windows olay günlüğü"
+            hint="Başarısız oturum açma denemeleri, yeni kullanıcı hesabı, yönetici grubuna ekleme, günlük temizleme, yeni hizmet kurulumu ve Defender algılamaları izlenir."
+            note={host?.elevated ? undefined : "Oturum ve hesap olayları (Security günlüğü) yalnızca yönetici olarak çalışırken okunabilir."}
+          >
+            <Switch label="Olay günlüğü" on={s.eventlogWatch} onChange={(v) => save({ eventlogWatch: v })} />
+          </Row>
+          <Row title="Ev ağı cihazları" hint="Windows'un zaten bildiği ağ komşuları dakikada bir okunur; ağa yeni bir cihaz katılınca zaman çizelgesine yazılır. Ağa paket gönderilmez.">
+            <Switch label="Ev ağı izleme" on={s.lanWatch} onChange={(v) => save({ lanWatch: v })} />
+          </Row>
+        </section>
+
+        <section>
+          <h3>Telefon bildirimleri</h3>
+          <Row
+            title="Telegram veya Discord"
+            hint="Önemli bir olay olduğunda telefonunuza mesaj gelir. Telegram için @BotFather'dan bot oluşturup anahtarını ve sohbet kimliğinizi, Discord için kanal ayarlarından webhook adresini girin."
+            note="Bilgiler bu Windows kullanıcısına bağlı olarak şifreli saklanır. Dakikada en fazla bir mesaj gider."
+          >
+            <PhoneSetup status={phone} onChange={loadPhone} />
+          </Row>
+          <Row title="Telefona gönder" hint="Kapalıyken hiçbir mesaj gönderilmez.">
+            <Switch
+              label="Telefon bildirimleri"
+              on={s.remoteNotify && (phone.telegram || phone.discord)}
+              onChange={(v) => (phone.telegram || phone.discord ? save({ remoteNotify: v }) : notify("Önce Telegram veya Discord bağlayın", "warn"))}
+            />
+          </Row>
+          <Row title="En düşük önem" hint="Telefona yalnızca bu düzey ve üstü gider.">
+            <Seg value={s.remoteMinSeverity} options={SEVERITIES.slice(1)} onChange={(v) => save({ remoteMinSeverity: v })} />
+          </Row>
+          <Row
+            title="Ayrıntıları da gönder"
+            hint="Kapalıyken yalnızca olay başlığı ve bilgisayar adı gider. Açıkken dosya yolları ve IP adresleri de mesaja eklenir."
+          >
+            <Switch label="Ayrıntıları gönder" on={s.remoteDetails} onChange={(v) => save({ remoteDetails: v })} />
           </Row>
         </section>
 

@@ -31,4 +31,6 @@ pub struct Shared {
     pub watch_findings: RwLock<Vec<Finding>>,
     pub auto_scans: RwLock<Vec<crate::watchers::AutoScan>>,
     pub drives: RwLock<Vec<crate::watchers::DriveInfo>>,
+    pub guard: RwLock<crate::guard::GuardState>,
+    pub net_usage: RwLock<crate::guard::netstats::NetUsage>,
 }

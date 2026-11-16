@@ -16,6 +16,7 @@ const FileIntel = lazy(() => import("../modules/file/FileIntel"));
 const StartupMonitor = lazy(() => import("../modules/startup/StartupMonitor"));
 const Terminal = lazy(() => import("../modules/terminal/Terminal"));
 const Reports = lazy(() => import("../modules/report/Reports"));
+const Health = lazy(() => import("../modules/health/Health"));
 const Settings = lazy(() => import("../modules/settings/Settings"));
 
 class ModuleBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -58,6 +59,8 @@ function ModuleView({ id }: { id: ModuleId }) {
       return <Terminal />;
     case "report":
       return <Reports />;
+    case "health":
+      return <Health />;
     case "settings":
       return <Settings />;
     default:
@@ -79,8 +82,8 @@ export function App() {
         setModule("settings");
         return;
       }
-      if (e.ctrlKey && /^[1-9]$/.test(e.key)) {
-        const m = MODULES[Number(e.key) - 1];
+      if (e.ctrlKey && /^[0-9]$/.test(e.key)) {
+        const m = MODULES[e.key === "0" ? 9 : Number(e.key) - 1];
         if (m) {
           e.preventDefault();
           setModule(m.id);

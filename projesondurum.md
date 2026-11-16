@@ -165,3 +165,27 @@ curl -sL https://github.com/refonuz-art/GhostMonit-r/releases/latest/download/la
 
 ## Sonraki adım
 Olası işler: kod imzalama sertifikası, abuse.ch anahtarı girilince liste güncellemesini canlı doğrulama, USB izlemeyi gerçek sürücüyle deneme.
+
+
+## 0.3.0 — tamamlandı (2026-11-17)
+Yeni klasör `src-tauri/src/guard/` (hepsi `guard::spawn` ile tek iş parçacığında zamanlanır; fidye kalkanının kendi izleyicileri var):
+- `canary.rs` fidye kalkanı: Belgeler/Masaüstü/Resimler'e gizli tuzak dosya (`!!GhostMonitor-tuzak-dosya.docx`, `zz GhostMonitor-tuzak-dosya.xlsx`) + ReadDirectoryChangesW ile toplu yeniden adlandırma (20/20 sn) ve *önceden var olan* belgelerin yeniden yazılması (40/20 sn). Alarmda en çok diske yazan 3 işlem. Kaldırırken `ghost-monitor.exe --cleanup` (NSIS hook `src-tauri/windows/hooks.nsh`) tuzakları siler.
+- `defender.rs` gizli PowerShell (10 dk): Get-MpComputerStatus, dışlamalar (standart kullanıcıya "N/A" → bilinmiyor), SecurityCenter2, firewall profilleri, son hotfix.
+- `browser.rs` Chromium (Chrome/Edge/Brave/Vivaldi/Opera/Opera GX) + Firefox uzantıları, izin sinyalleri, yeni uzantı olayı (`ext_seen` ayarı).
+- `netconf.rs` hosts / DNS (Tcpip arayüzleri) / WinINet proxy+PAC, değişiklik olayı (`netconf_fp`).
+- `eventlog.rs` EvtQuery: Security (yönetici gerekir), System, Defender/Operational. İlk çalıştırmada geçmişi oynatmaz (`evt_last:<kanal>`).
+- `firewall.rs` netsh + ShellExecuteEx runas; kurallar "Ghost Monitor - …", listesi `fw_rules` ayarında; giriş doğrulaması (IP parse, var olan mutlak .exe).
+- `netstats.rs` EStats ile program başına TCP baytları (yalnızca yönetici).
+- `lan.rs` GetIpNetTable2 + kullanıcı tetiklemeli SendARP taraması; modem MAC değişimi bulgusu.
+- `quarantine.rs` SHA-256 sayaç modlu XOR, anahtar DPAPI ile, tablo `quarantine` (migration v3).
+- `remote.rs` Telegram/Discord (DPAPI, URL/anahtar doğrulama, dakikada 1, varsayılan HIGH, ayrıntı kapalı).
+- `health.rs` puan + kontrol listesi.
+- IPC: `commands_guard.rs`; ön yüz `src/ipc/guard.ts`, `src/modules/health/` (Ctrl+0). Ayarlar'a "Koruma" ve "Telefon bildirimleri"; Dossier'e Dondur/İnterneti engelle, Ağ'a "Bu adresi engelle", Tehdit'e "Karantinaya al"/"Şüphelileri dondur".
+Güvenlik denetimi düzeltmeleri: reveal yolunu tırnaklı `raw_arg`, export_report uzantı/mutlak yol kontrolü, hash içe aktarma 2 GB sınırı.
+Testler: 73 Rust (+1 ignored canlı Defender), 19 vitest. Canlı doğrulanan: DNS, ARP komşuları, Defender betiği, olay günlüğü (Security standart kullanıcıda erişim reddi beklendiği gibi), tarayıcı uzantıları.
+Doğrulanmayanlar: uygulamanın 0.3.0 olarak gerçekten açılıp Sağlık ekranının görüntüsü (eski yönetici örneği PID 42236 çalıştığı için yeni sürüm başlatılamadı/kurulamadı), güvenlik duvarı kuralının UAC ile eklenmesi, Telegram/Discord gerçek gönderim, fidye alarmının gerçek tetiklenmesi.
+
+## YARIN YAPILACAK (kullanıcı istedi, 2026-11-17): Sesli yapay zekâ asistanı
+- Resident Evil'deki konuşan yapay zekâdan esinlenen ama ÖZGÜN bir karakter (isim/ses/görsel bize ait).
+- Kullanıcıyla sesli konuşacak, şüpheli durumlarda güzel, doğal Türkçe ile uyaracak ("Şüpheli bir durum tespit ettim…").
+- Bu konuyu kullanıcıya oturum başında HATIRLAT.

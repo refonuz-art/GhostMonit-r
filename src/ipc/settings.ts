@@ -15,6 +15,12 @@ export interface AppSettings {
   autoReportFormat: "pdf" | "json";
   autoReportDir: string | null;
   updateCheck: boolean;
+  ransomShield: boolean;
+  eventlogWatch: boolean;
+  lanWatch: boolean;
+  remoteNotify: boolean;
+  remoteMinSeverity: Severity;
+  remoteDetails: boolean;
 }
 
 export interface UpdateInfo {

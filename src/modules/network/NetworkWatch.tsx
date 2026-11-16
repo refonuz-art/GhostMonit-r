@@ -3,6 +3,7 @@ import type uPlot from "uplot";
 import { Plot, Sev } from "../../design/components";
 import { ago, clock, rate, stamp } from "../../design/format";
 import { api } from "../../ipc/api";
+import { guard } from "../../ipc/guard";
 import type { ConnHistoryRow, ConnectionInfo, GeoStatus } from "../../ipc/types";
 import { useGhost } from "../../state/store";
 import { contactsOf, Sonar } from "../../viz/Sonar";
@@ -79,6 +80,7 @@ export default function NetworkWatch() {
   const series = useGhost((s) => s.series);
   const metrics = useGhost((s) => s.metrics);
   const focusProcess = useGhost((s) => s.focusProcess);
+  const notify = useGhost((s) => s.notify);
   const [tab, setTab] = useState<Tab>("live");
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -143,9 +145,23 @@ export default function NetworkWatch() {
         <div className="nw-sonar">
           <Sonar contacts={contacts} selected={selected} onSelect={setSelected} />
           {selected && (
-            <button className="nw-clear btn" onClick={() => setSelected(null)}>
-              {selected} filtresini kaldır
-            </button>
+            <div className="nw-clear">
+              <button className="btn" onClick={() => setSelected(null)}>
+                {selected} filtresini kaldır
+              </button>
+              <button
+                className="btn"
+                title="Windows Güvenlik Duvarı'nda bu adresle bağlantıyı engeller (yönetici onayı istenir)"
+                onClick={() =>
+                  guard.block("ip", selected).then(
+                    (r) => notify(`${r.target} engellendi`),
+                    (e) => notify(String(e), "bad"),
+                  )
+                }
+              >
+                Bu adresi engelle
+              </button>
+            </div>
           )}
         </div>
         <div className="nw-traffic">

@@ -27,6 +27,20 @@ const KIND_LABEL: Record<string, string> = {
   "usb.removed": "çıkarılan sürücü",
   "intel.feed": "liste güncellemesi",
   "report.auto": "otomatik rapor",
+  "ransom.alert": "fidye yazılımı alarmı",
+  "defense.change": "koruma ayarı değişikliği",
+  "defender.detection": "Defender algılaması",
+  "net.config_change": "ağ ayarı değişikliği",
+  "lan.new_device": "ağa katılan cihaz",
+  "browser.extension_new": "yeni tarayıcı uzantısı",
+  "account.created": "yeni kullanıcı hesabı",
+  "account.admin": "yönetici grubuna ekleme",
+  "account.rdp": "uzak masaüstü oturumu",
+  "log.cleared": "olay günlüğü temizleme",
+  "service.installed": "yeni hizmet",
+  "user.block": "kullanıcı: engelleme",
+  "user.quarantine": "kullanıcı: karantina",
+  "process.suspend": "kullanıcı: işlem dondurma",
 };
 
 function fileStamp(ms: number) {

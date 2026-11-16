@@ -3,6 +3,7 @@ import { Sev, SigMark } from "../../design/components";
 import { ago, bytes, stamp } from "../../design/format";
 import { Icon } from "../../design/icons";
 import { api } from "../../ipc/api";
+import { guard } from "../../ipc/guard";
 import type { ProcessInfo } from "../../ipc/types";
 import { useGhost } from "../../state/store";
 import { EvidenceBar } from "../threat/EvidenceBar";
@@ -18,6 +19,8 @@ export function Dossier({ pid, proc, onClose }: { pid: number; proc: ProcessInfo
   const elevated = useGhost((s) => s.host?.elevated ?? false);
   const [stage, setStage] = useState<KillStage>("idle");
   const [killMsg, setKillMsg] = useState<string | null>(null);
+  const [frozen, setFrozen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
 
   if (!proc) {
     return (
@@ -97,6 +100,39 @@ export function Dossier({ pid, proc, onClose }: { pid: number; proc: ProcessInfo
               }}
             >
               <Icon.trust /> Güvenilir işaretle
+            </button>
+          )}
+          {p.pid > 4 && !p.critical && (
+            <button
+              className="btn"
+              title="İşlemi kapatmadan durdurur; fidye yazılımına karşı ilk müdahale"
+              onClick={() =>
+                guard.suspend(p.pid, !frozen).then(
+                  (m) => {
+                    setFrozen(!frozen);
+                    notify(m);
+                  },
+                  (e) => notify(String(e), "bad"),
+                )
+              }
+            >
+              {frozen ? "Devam ettir" : "Dondur"}
+            </button>
+          )}
+          {p.exe && p.pid > 4 && (
+            <button
+              className="btn"
+              disabled={blocking}
+              title="Windows Güvenlik Duvarı'nda bu programın internet erişimini engeller (yönetici onayı istenir)"
+              onClick={() => {
+                setBlocking(true);
+                guard
+                  .block("program", p.exe!)
+                  .then((r) => notify(`${r.target} internete çıkamaz`), (e) => notify(String(e), "bad"))
+                  .finally(() => setBlocking(false));
+              }}
+            >
+              {blocking ? "Engelleniyor…" : "İnterneti engelle"}
             </button>
           )}
           {stage === "idle" && (

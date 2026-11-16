@@ -103,6 +103,19 @@ const MIGRATIONS: &[&str] = &[
       SELECT 'startup_scanned_admin', CAST(MIN(first_seen) AS TEXT) FROM startup_items
        WHERE scope = 'admin' HAVING COUNT(*) > 0;
     "#,
+    // v3
+    r#"
+    CREATE TABLE quarantine (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        original    TEXT NOT NULL,
+        stored      TEXT NOT NULL,
+        sha256      TEXT NOT NULL,
+        size        INTEGER NOT NULL,
+        key         BLOB NOT NULL,
+        reason      TEXT NOT NULL DEFAULT '',
+        created_at  INTEGER NOT NULL
+    );
+    "#,
 ];
 
 pub struct Store {

@@ -3,6 +3,7 @@ import { SEV_LABEL, Sev } from "../../design/components";
 import { ago, basename, stamp } from "../../design/format";
 import { Icon } from "../../design/icons";
 import { api } from "../../ipc/api";
+import { guard } from "../../ipc/guard";
 import type { Finding, Severity } from "../../ipc/types";
 import { SEVERITIES } from "../../ipc/types";
 import { securityLevel } from "../../state/derive";
@@ -31,6 +32,11 @@ const RULES: { area: string; checks: string; live: boolean }[] = [
   },
   { area: "Dosya analizi", checks: "Çift uzantı, içerik-uzantı uyuşmazlığı, RTLO, internetten inen imzasız dosya", live: true },
   { area: "Dosya izleme", checks: "İndirilenler ve Masaüstü'ne gelen yeni program/betik/kısayol otomatik analiz edilir (Ayarlar'dan açılıp kapatılır)", live: true },
+  { area: "Fidye yazılımı", checks: "Tuzak dosyalara dokunulması, belgelerin topluca yeniden adlandırılması veya yazılması", live: true },
+  { area: "Koruma ayarları", checks: "Defender kapatılması, geniş dışlamalar, güvenlik duvarı, hosts/DNS/proxy yönlendirmesi", live: true },
+  { area: "Tarayıcı uzantıları", checks: "Tüm sitelere erişim, çerez, hata ayıklayıcı, proxy izinleri; mağaza dışı kurulum", live: true },
+  { area: "Olay günlüğü", checks: "Şifre deneme saldırısı, yeni hesap, yönetici grubu, günlük temizleme (Security günlüğü yönetici ister)", live: true },
+  { area: "Yerel ağ", checks: "Modemin donanım adresinin değişmesi (ARP zehirleme), ağa yeni cihaz katılması", live: true },
   { area: "Sürücüler", checks: "Takılan USB, harici disk ve bağlanan ISO: autorun.inf, kökteki kısayol ve programlar", live: true },
 ];
 
@@ -55,6 +61,9 @@ function CaseDetail({ f, live }: { f: Finding; live: boolean }) {
   const procs = processes.filter((p) => f.pids.includes(p.pid));
   const sigs = distinct(f.signals);
   const path = f.entity.includes("\\") ? f.entity : null;
+  const [qBusy, setQBusy] = useState(false);
+  // Files (downloads, drive roots) and process images can be quarantined once nothing runs them.
+  const canQuarantine = !!path && (f.entityKind === "file" || f.entityKind === "process") && procs.length === 0;
 
   return (
     <article className={`dossier-case risk-${f.severity}`}>
@@ -113,6 +122,38 @@ function CaseDetail({ f, live }: { f: Finding; live: boolean }) {
         {path && (
           <button className="btn" onClick={() => api.reveal(path).catch((e) => notify(String(e), "bad"))}>
             <Icon.folder /> Konumu aç
+          </button>
+        )}
+        {f.entityKind === "ransomware" && procs.length > 0 && (
+          <button
+            className="btn btn--danger"
+            onClick={async () => {
+              for (const p of procs) {
+                await guard.suspend(p.pid, true).then(
+                  (m) => notify(m),
+                  (e) => notify(String(e), "bad"),
+                );
+              }
+            }}
+          >
+            Şüphelileri dondur
+          </button>
+        )}
+        {canQuarantine && (
+          <button
+            className="btn"
+            disabled={qBusy}
+            title="Dosyayı yerinden kaldırıp şifreli olarak saklar; Sağlık → Karantina'dan geri yüklenebilir"
+            onClick={async () => {
+              setQBusy(true);
+              await guard.quarantineAdd(path!, f.title).then(
+                () => notify("Dosya karantinaya alındı"),
+                (e) => notify(String(e), "bad"),
+              );
+              setQBusy(false);
+            }}
+          >
+            {qBusy ? "Karantinaya alınıyor…" : "Karantinaya al"}
           </button>
         )}
         <button

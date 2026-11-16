@@ -48,6 +48,10 @@
   position: absolute;
   top: var(--s3);
   left: var(--s3);
+  display: flex;
+  gap: var(--s2);
+}
+.nw-clear .btn {
   background: var(--graphite-1);
 }
 .nw-traffic {

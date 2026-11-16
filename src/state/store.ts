@@ -18,6 +18,7 @@ export type ModuleId =
   | "timeline"
   | "terminal"
   | "report"
+  | "health"
   | "settings";
 
 const HISTORY = 180; // 3 minutes at 1 Hz

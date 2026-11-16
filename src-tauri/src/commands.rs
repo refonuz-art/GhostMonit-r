@@ -210,12 +210,14 @@ pub fn quit_app(app: AppHandle) {
 
 #[tauri::command]
 pub fn reveal_in_explorer(path: String) -> R<()> {
+    use std::os::windows::process::CommandExt;
     let p = std::path::Path::new(&path);
-    if !p.exists() {
+    if !p.is_absolute() || path.contains('"') || !p.exists() {
         return Err("Dosya bulunamadı".into());
     }
+    // raw_arg + quotes: a file name containing commas must not be read as extra switches.
     std::process::Command::new("explorer.exe")
-        .arg(format!("/select,{}", p.display()))
+        .raw_arg(format!("/select,\"{}\"", p.display()))
         .spawn()
         .map(|_| ())
         .map_err(err)

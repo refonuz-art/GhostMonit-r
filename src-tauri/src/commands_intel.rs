@@ -279,6 +279,11 @@ pub async fn export_report(
     since: Option<i64>,
     until: Option<i64>,
 ) -> R<String> {
+    let target = std::path::Path::new(&path);
+    let ext_ok = target.extension().is_some_and(|e| e.eq_ignore_ascii_case(&format));
+    if !target.is_absolute() || !ext_ok || !matches!(format.as_str(), "json" | "pdf") {
+        return Err("Rapor yalnızca .pdf veya .json uzantılı bir dosyaya kaydedilebilir".into());
+    }
     let shared = s.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let (a, b) = period(&kind, since, until);

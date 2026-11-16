@@ -22,6 +22,7 @@ pub fn emit_event(app: &AppHandle, shared: &Shared, mut e: SecurityEvent) {
         e.id = id;
     }
     crate::shell::maybe_notify(app, shared, &e);
+    crate::guard::remote::maybe_send(app, shared, &e);
     let _ = app.emit("gm://event", &e);
 }
 

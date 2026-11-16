@@ -34,6 +34,17 @@ pub struct AppSettings {
     pub auto_report_dir: Option<String>,
     /// Check GitHub Releases for a new version (installing always needs a click).
     pub update_check: bool,
+    /// Decoy files + mass rename/rewrite detection in the user's document folders.
+    pub ransom_shield: bool,
+    /// Read Windows event logs (Security needs administrator rights).
+    pub eventlog_watch: bool,
+    /// Read the ARP table for new devices on the home network.
+    pub lan_watch: bool,
+    /// Phone notifications via Telegram / Discord.
+    pub remote_notify: bool,
+    pub remote_min_severity: Severity,
+    /// Include event details (paths, addresses) in phone notifications.
+    pub remote_details: bool,
 }
 
 impl Default for AppSettings {
@@ -52,6 +63,12 @@ impl Default for AppSettings {
             auto_report_format: "pdf".into(),
             auto_report_dir: None,
             update_check: true,
+            ransom_shield: true,
+            eventlog_watch: true,
+            lan_watch: true,
+            remote_notify: false,
+            remote_min_severity: Severity::High,
+            remote_details: false,
         }
     }
 }

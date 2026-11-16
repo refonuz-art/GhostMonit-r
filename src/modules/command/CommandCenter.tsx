@@ -24,6 +24,20 @@ const KIND_GLYPH: Record<string, string> = {
   "file.new": "▤",
   "usb.inserted": "⊟",
   "usb.removed": "⊟",
+  "ransom.alert": "▲",
+  "defense.change": "▲",
+  "defender.detection": "▲",
+  "net.config_change": "◈",
+  "lan.new_device": "◈",
+  "browser.extension_new": "◇",
+  "account.created": "●",
+  "account.admin": "●",
+  "account.rdp": "●",
+  "log.cleared": "●",
+  "service.installed": "⏻",
+  "user.block": "✕",
+  "user.quarantine": "✕",
+  "process.suspend": "✕",
 };
 
 function SystemColumn() {

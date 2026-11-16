@@ -17,11 +17,12 @@ const RANGES = [
 const LANES = [
   { id: "all", label: "Tümü", kinds: [] as string[] },
   { id: "threat", label: "Tehdit", kinds: ["threat.finding"] },
-  { id: "network", label: "Ağ", kinds: ["network.new_remote"] },
+  { id: "network", label: "Ağ", kinds: ["network.new_remote", "net.config_change", "lan.new_device"] },
+  { id: "defense", label: "Koruma ve hesap", kinds: ["ransom.alert", "defense.change", "defender.detection", "account.created", "account.admin", "account.rdp", "log.cleared", "browser.extension_new"] },
   { id: "process", label: "İşlem", kinds: ["process.start", "process.kill"] },
   { id: "files", label: "Dosya ve sürücü", kinds: ["file.new", "usb.inserted", "usb.removed"] },
-  { id: "startup", label: "Açılış", kinds: ["startup.new", "startup.changed", "startup.removed"] },
-  { id: "user", label: "Kullanıcı", kinds: ["user.trust", "process.kill"] },
+  { id: "startup", label: "Açılış", kinds: ["startup.new", "startup.changed", "startup.removed", "service.installed"] },
+  { id: "user", label: "Kullanıcı", kinds: ["user.trust", "process.kill", "user.block", "user.quarantine", "process.suspend"] },
 ] as const;
 
 const LANE_OF: Record<string, { glyph: string; name: string }> = {
@@ -38,6 +39,20 @@ const LANE_OF: Record<string, { glyph: string; name: string }> = {
   "startup.removed": { glyph: "⏻", name: "açılış" },
   "intel.feed": { glyph: "≡", name: "istihbarat" },
   "report.auto": { glyph: "▦", name: "rapor" },
+  "ransom.alert": { glyph: "▲", name: "koruma" },
+  "defense.change": { glyph: "▲", name: "koruma" },
+  "defender.detection": { glyph: "▲", name: "koruma" },
+  "net.config_change": { glyph: "◈", name: "ağ" },
+  "lan.new_device": { glyph: "◈", name: "ağ" },
+  "browser.extension_new": { glyph: "◇", name: "tarayıcı" },
+  "account.created": { glyph: "●", name: "hesap" },
+  "account.admin": { glyph: "●", name: "hesap" },
+  "account.rdp": { glyph: "●", name: "hesap" },
+  "log.cleared": { glyph: "●", name: "hesap" },
+  "service.installed": { glyph: "⏻", name: "açılış" },
+  "user.block": { glyph: "✕", name: "kullanıcı" },
+  "user.quarantine": { glyph: "✕", name: "kullanıcı" },
+  "process.suspend": { glyph: "✕", name: "kullanıcı" },
 };
 
 type RangeId = (typeof RANGES)[number]["id"];
