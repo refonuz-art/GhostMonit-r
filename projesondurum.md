@@ -12,6 +12,83 @@
 - Veri: `%APPDATA%\com.nexusghost.monitor\ghost.db` (SQLite), GeoIP: `...\geo\*.mmdb`
 - PDF'i incelemek için saklamak: `GM_PDF_OUT=<yol> cargo test pdf_survives`
 
+## Yeni sürüm yayımlama (adım adım)
+
+Kurulu Ghost Monitor'ler GitHub'daki son sürümü günde iki kez denetler. Yeni sürüm görürlerse bildirim gösterirler, kullanıcı Ayarlar → Güncelleme'den tek tıkla kurar. Yayımlamak için:
+
+**Hangi bilgiler nerede**
+| Ne | Nerede |
+|---|---|
+| GitHub deposu (herkese açık) | https://github.com/refonuz-art/GhostMonit-r — kaynak kod `main` dalında, yükleyiciler "Releases" sayfasında |
+| Güncelleme adresi (uygulamaya gömülü) | `https://github.com/refonuz-art/GhostMonit-r/releases/latest/download/latest.json` (`src-tauri/tauri.conf.json` → `plugins.updater`) |
+| Yayımlama betiği | `scripts/release.ps1` |
+| Sürüm notları | `docs/releases/<sürüm>.md` (UTF-8, Türkçe yazılabilir) |
+| **Güncelleme imza anahtarı (GİZLİ)** | `C:\Users\user\.tauri\ghostmonitor-updater.key` |
+| Anahtarın parolası | `C:\Users\user\.tauri\ghostmonitor-updater.pw` — DPAPI ile şifreli, yalnızca bu Windows kullanıcısı açabilir |
+| Açık anahtar | `ghostmonitor-updater.key.pub` + `tauri.conf.json` içindeki `pubkey` |
+
+**1. Sürüm numarasını artır** — üç dosyada aynı numara olmalı (ör. 0.2.0 → 0.2.1):
+- `src-tauri/tauri.conf.json` → `"version"`
+- `src-tauri/Cargo.toml` → `version = "..."`
+- `package.json` → `"version"`
+
+Kural: küçük düzeltme → son hane (0.2.1), yeni özellik → orta hane (0.3.0). Numara mutlaka **büyümeli**; aynı veya küçük numarayı uygulamalar güncelleme saymaz.
+
+**2. Testleri çalıştır**
+```
+cd src-tauri && cargo test
+cd .. && pnpm test && pnpm typecheck
+```
+
+**3. Sürüm notunu yaz** — `docs/releases/0.2.1.md` dosyası oluştur. Kısa madde listesi yeterli; bu metin hem GitHub sayfasında hem uygulamanın güncelleme kutusunda görünür.
+
+**4. Kaynak kodu GitHub'a gönder** (etiket bu commit'ten oluşturulur, bu yüzden betikten ÖNCE):
+```
+git add -A
+git commit -m "Ghost Monitor 0.2.1"
+git push origin main
+```
+
+**5. Derle, imzala, yayımla** — tek komut (PowerShell'de, proje klasöründe):
+```
+powershell -ExecutionPolicy Bypass -File scripts\release.ps1 -NotesFile docs\releases\0.2.1.md
+```
+Betiğin yaptıkları:
+- İmza anahtarını ve parolayı okur, `pnpm app:build` çalıştırır (~5 dk).
+- Yükleyiciyi `GhostMonitor_<sürüm>_x64-setup.exe` adıyla kopyalar; adı boşluksuz olmalı çünkü GitHub boşlukları noktaya çevirir.
+- Yükleyicinin `.sig` imzasından `latest.json` dosyasını üretir.
+- `gh release create v<sürüm>` ile ikisini GitHub'a yükler.
+
+Seçenekler:
+- `-Draft`: taslak olarak yükler. Taslak, kullanıcılara görünmez ve güncelleme olarak sunulmaz; GitHub'da "Publish" denince yayına girer.
+- `-NoBuild`: derlemeyi atlar, var olan çıktıyı yükler.
+
+**6. Doğrula**
+```
+gh release view v0.2.1 -R refonuz-art/GhostMonit-r
+curl -sL https://github.com/refonuz-art/GhostMonit-r/releases/latest/download/latest.json
+```
+`latest.json` içinde yeni sürüm numarası görünmeli. Kurulu uygulamada Ayarlar → "Şimdi denetle" yeni sürümü göstermeli.
+
+**Sorun çıkarsa**
+- `gh` oturumu yoksa: `gh auth login` (hesap: refonuz-art).
+- "installer for X not found": sürüm numarası üç dosyada aynı değil ya da derleme başarısız; `pnpm app:build` çıktısına bak.
+- Yanlış sürüm yayımlandıysa: GitHub'da release'i sil (`gh release delete v0.2.1 -R refonuz-art/GhostMonit-r --cleanup-tag`). Ardından numarayı yine **artırarak** tekrar yayımla. Kullanıcılar aynı numarayı ikinci kez almaz.
+- Uygulama güncellemeyi "imza doğrulanamadı" diye reddediyorsa: yanlış anahtarla imzalanmış demektir. `tauri.conf.json` içindeki `pubkey` değiştirilmemeli.
+
+**ANAHTAR UYARISI**
+- `ghostmonitor-updater.key` kaybolursa veya yeniden üretilirse, kurulu tüm Ghost Monitor'ler yeni sürümleri reddeder. O durumda kullanıcıların yeni sürümü elle indirip kurması gerekir.
+- Anahtarı ve parolayı güvenli bir yere (şifreli USB, parola yöneticisi) yedekle. Parola `.pw` dosyasında DPAPI ile şifreli; Windows yeniden kurulursa açılamaz. Bu yüzden parolanın kendisini de yedekle:
+  ```
+  $s = Get-Content $env:USERPROFILE\.tauri\ghostmonitor-updater.pw | ConvertTo-SecureString
+  [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+  ```
+- Anahtar dosyaları asla depoya eklenmez; `.gitignore` `*.key` ve `*.pw` dosyalarını dışlar.
+
+**Bilinen durum:** `v0.2.0` etiketi ilk README commit'ini gösteriyor; etiketi taşımak için gereken zorla gönderime (force-push) izin verilmedi. Bu yüzden o sürümün "Source code" arşivi eksik; yükleyici ve güncelleme etkilenmiyor. Sonraki sürümlerde adım 4 önce yapıldığı için sorun olmaz.
+
+**Kod imzalama yok:** Yükleyici bir kod imzalama sertifikasıyla imzalı değil, bu yüzden Windows SmartScreen ilk indirmede "tanınmayan uygulama" uyarısı gösterebilir ("Ek bilgi → Yine de çalıştır"). Güncelleme imzası (minisign) bundan ayrıdır ve çalışır.
+
 ## Tamamlanan
 - **Altyapı:** Tauri 2 + React 19 + TS + Vite 8, özel pencere çerçevesi (decorations:false), ikonlar, CSP, dialog eklentisi (yalnız open/save izinleri)
 - **Tasarım sistemi "Optik Hücre":** `src/design/tokens.css`, `base.css` (ortak `.seg/.facts/.evidence/.case-actions` burada), özel ikon seti, Sev/SigMark/Meter/Plot
