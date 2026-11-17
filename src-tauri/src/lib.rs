@@ -159,6 +159,9 @@ pub fn run() {
             commands_assistant::assistant_weather,
             commands_assistant::media_now,
             commands_assistant::media_control,
+            commands_assistant::portrait_get,
+            commands_assistant::portrait_set,
+            commands_assistant::portrait_clear,
             commands_assistant::assistant_ask,
             commands_assistant::assistant_install_stt,
         ])

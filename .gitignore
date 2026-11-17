@@ -10,3 +10,6 @@ src-tauri/gen/
 *.pw
 .env*
 *.tsbuildinfo
+
+# user artwork (kept out of the public repo)
+hologram.jpeg

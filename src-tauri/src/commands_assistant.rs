@@ -114,3 +114,43 @@ pub async fn media_now() -> R<Option<media::NowPlaying>> {
 pub async fn media_control(action: String) -> R<()> {
     blocking(move || media::control(&action)).await
 }
+
+// ---- Ayla portrait: a user-chosen picture kept in the data folder (never in the repo) ----
+
+const PORTRAIT_MAX: usize = 25 * 1024 * 1024;
+
+fn portrait_path(s: &Shared) -> std::path::PathBuf {
+    std::path::PathBuf::from(&s.host.read().data_dir).join("ayla-portrait.img")
+}
+
+/// The saved portrait's bytes, or an empty body when none is set.
+#[tauri::command]
+pub fn portrait_get(s: S) -> R<Response> {
+    let p = portrait_path(&s);
+    Ok(Response::new(if p.is_file() { std::fs::read(p).map_err(|e| e.to_string())? } else { Vec::new() }))
+}
+
+/// Save a JPEG/PNG/WebP sent as the raw request body.
+#[tauri::command]
+pub fn portrait_set(s: S, request: Request<'_>) -> R<()> {
+    let InvokeBody::Raw(img) = request.body() else { return Err("Görsel bekleniyordu".into()) };
+    if img.len() > PORTRAIT_MAX {
+        return Err("Görsel 25 MB'tan büyük olamaz".into());
+    }
+    let ok = img.starts_with(&[0xFF, 0xD8, 0xFF])
+        || img.starts_with(b"\x89PNG\r\n\x1a\n")
+        || (img.len() > 12 && &img[0..4] == b"RIFF" && &img[8..12] == b"WEBP");
+    if !ok {
+        return Err("Yalnızca JPEG, PNG ya da WebP görseller kullanılabilir".into());
+    }
+    std::fs::write(portrait_path(&s), img).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn portrait_clear(s: S) -> R<()> {
+    let p = portrait_path(&s);
+    if p.is_file() {
+        std::fs::remove_file(p).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}

@@ -67,6 +67,9 @@ export const assistantApi = {
   weather: (city?: string | null) => invoke<Weather>("assistant_weather", { city: city ?? null }),
   mediaNow: () => invoke<NowPlaying | null>("media_now"),
   mediaControl: (action: "toggle" | "next" | "prev") => invoke<void>("media_control", { action }),
+  portraitGet: () => invoke<ArrayBuffer>("portrait_get"),
+  portraitSet: (img: Uint8Array) => invoke<void>("portrait_set", img),
+  portraitClear: () => invoke<void>("portrait_clear"),
   installStt: () => invoke<AssistantStatus>("assistant_install_stt"),
   ask: (system: unknown, messages: ClaudeMessage[], tools: unknown[]) =>
     invoke<ClaudeResponse>("assistant_ask", { system, messages, tools }),

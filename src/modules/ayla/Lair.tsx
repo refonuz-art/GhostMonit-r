@@ -1,9 +1,10 @@
 // Ayla's own screen: the full-size hologram in the middle, live system panels around her,
 // and a place to talk to her. Every number here comes from the same live feed as the rest
 // of the app; panels with nothing to show say so instead of inventing values.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { handle } from "../../assistant/agent";
 import { Hologram } from "../../assistant/Hologram";
+import { Portrait, type PortraitState } from "../../assistant/Portrait";
 import { useAyla, type Mode } from "../../assistant/store";
 import * as voice from "../../assistant/voice";
 import { bytes, duration, rate } from "../../design/format";
@@ -320,6 +321,61 @@ function Launchers() {
   );
 }
 
+type View = "holo" | "portrait";
+const VIEW_KEY = "gm.ayla.view";
+
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "holo" ? "holo" : "portrait";
+  } catch {
+    return "portrait";
+  }
+}
+
+/** Switch between the point-cloud hologram and the animated picture; replace the picture. */
+function ViewSwitch({ view, setView, pstate }: { view: View; setView: (v: View) => void; pstate: PortraitState }) {
+  const file = useRef<HTMLInputElement>(null);
+  const notify = useGhost((s) => s.notify);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      await assistantApi.portraitSet(new Uint8Array(await f.arrayBuffer()));
+      window.dispatchEvent(new Event("gm-portrait"));
+      setView("portrait");
+      notify("Görsel kaydedildi");
+    } catch (e) {
+      notify(String(e), "bad");
+    }
+  };
+  return (
+    <div className="lair-view">
+      <div className="lair-view__seg" role="group" aria-label="Görünüm">
+        <button className={view === "holo" ? "is-on" : ""} onClick={() => setView("holo")} aria-pressed={view === "holo"}>
+          Hologram
+        </button>
+        <button className={view === "portrait" ? "is-on" : ""} onClick={() => setView("portrait")} aria-pressed={view === "portrait"}>
+          Görsel
+        </button>
+      </div>
+      {view === "portrait" && (
+        <button className="lair-link" onClick={() => file.current?.click()}>
+          {pstate === "none" ? "Görsel seç" : "Görseli değiştir"}
+        </button>
+      )}
+      <input
+        ref={file}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => {
+          void pick(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 export default function Lair() {
   const { mode, alert, subtitle } = useAyla();
   const talk = useAyla((s) => s.talk);
@@ -329,6 +385,21 @@ export default function Lair() {
     settingsApi.get().then((s) => setName(s.assistantName || "Ayla"), () => {});
   }, []);
   const level = useCallback(() => voice.level(), []);
+  const [view, setViewState] = useState<View>(readView);
+  const [pstate, setPstate] = useState<PortraitState>("loading");
+  const [rigged, setRigged] = useState(true);
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* per-viewer preference only */
+    }
+  };
+  const onPortrait = useCallback((st: PortraitState, r?: boolean) => {
+    setPstate(st);
+    if (r !== undefined) setRigged(r);
+  }, []);
   const submit = () => {
     const v = text.trim();
     setText("");
@@ -346,7 +417,19 @@ export default function Lair() {
       </div>
 
       <div className="lair-stage">
-        <Hologram mode={mode} alert={alert} level={level} variant="stage" />
+        {view === "holo" ? (
+          <Hologram mode={mode} alert={alert} level={level} variant="stage" />
+        ) : (
+          <>
+            <Portrait mode={mode} alert={alert} level={level} onState={onPortrait} />
+            {pstate === "none" && <p className="lair-empty">Henüz görsel seçilmedi. Üstteki “Görsel seç” ile bir JPEG ya da PNG yükleyin.</p>}
+            {pstate === "error" && <p className="lair-empty">Görsel açılamadı. Başka bir dosya deneyin ya da Hologram görünümüne geçin.</p>}
+            {pstate === "ready" && !rigged && (
+              <p className="lair-note">Bu görselde yüz ve kol noktaları tanımlı değil; yalnızca ışık efektleri çalışıyor.</p>
+            )}
+          </>
+        )}
+        <ViewSwitch view={view} setView={setView} pstate={pstate} />
         {subtitle && <p className="lair-sub">{subtitle}</p>}
         <div className="lair-bottom">
           <Launchers />

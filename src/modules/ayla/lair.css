@@ -481,3 +481,58 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 }
+
+/* Animated picture and the view switch */
+.ayla-portrait {
+  position: absolute;
+  inset: 0 0 92px;
+  width: 100%;
+  height: calc(100% - 92px);
+}
+.lair-view {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  z-index: 2;
+}
+.lair-view__seg {
+  display: flex;
+  border: 1px solid var(--blood-soft);
+  background: rgba(14, 2, 4, 0.8);
+}
+.lair-view__seg button {
+  padding: 4px var(--s3);
+  border: 0;
+  background: none;
+  color: var(--ash);
+  font: inherit;
+  font-size: var(--fs-s);
+  cursor: pointer;
+}
+.lair-view__seg button.is-on {
+  background: rgba(255, 42, 61, 0.22);
+  color: var(--bone);
+}
+.lair-view__seg button:focus-visible,
+.lair-view__seg button:hover {
+  color: var(--bone);
+}
+.lair-empty,
+.lair-note {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 40%;
+  margin: 0;
+  text-align: center;
+  color: var(--ash);
+}
+.lair-note {
+  top: auto;
+  bottom: 150px;
+  font-size: var(--fs-s);
+}
