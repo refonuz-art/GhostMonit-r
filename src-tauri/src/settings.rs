@@ -45,7 +45,23 @@ pub struct AppSettings {
     pub remote_min_severity: Severity,
     /// Include event details (paths, addresses) in phone notifications.
     pub remote_details: bool,
+    /// Voice assistant: speaks alerts and answers commands.
+    pub assistant_enabled: bool,
+    pub assistant_name: String,
+    /// "windows" (installed voice, offline) | "azure" (Azure Speech neural voice, needs a key).
+    pub assistant_voice: String,
+    pub assistant_azure_voice: String,
+    /// Speech rate, 0.7 .. 1.4.
+    pub assistant_rate: f32,
+    pub assistant_speak_alerts: bool,
+    pub assistant_min_severity: Severity,
+    /// Show the hologram in the corner of every screen.
+    pub assistant_float: bool,
+    /// City for weather answers (sent to Open-Meteo only when weather is asked).
+    pub assistant_city: Option<String>,
 }
+
+pub const AZURE_VOICES: [&str; 2] = ["tr-TR-EmelNeural", "tr-TR-AhmetNeural"];
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -69,6 +85,15 @@ impl Default for AppSettings {
             remote_notify: false,
             remote_min_severity: Severity::High,
             remote_details: false,
+            assistant_enabled: true,
+            assistant_name: "Ayla".into(),
+            assistant_voice: "windows".into(),
+            assistant_azure_voice: AZURE_VOICES[0].into(),
+            assistant_rate: 1.0,
+            assistant_speak_alerts: true,
+            assistant_min_severity: Severity::High,
+            assistant_float: true,
+            assistant_city: None,
         }
     }
 }
@@ -100,6 +125,20 @@ impl AppSettings {
         if !matches!(self.auto_report_format.as_str(), "pdf" | "json") {
             self.auto_report_format = "pdf".into();
         }
+        if !matches!(self.assistant_voice.as_str(), "windows" | "azure") {
+            self.assistant_voice = "windows".into();
+        }
+        if !AZURE_VOICES.contains(&self.assistant_azure_voice.as_str()) {
+            self.assistant_azure_voice = AZURE_VOICES[0].into();
+        }
+        self.assistant_rate = if self.assistant_rate.is_finite() { self.assistant_rate.clamp(0.7, 1.4) } else { 1.0 };
+        let name: String = self.assistant_name.trim().chars().filter(|c| c.is_alphanumeric() || *c == ' ').take(20).collect();
+        self.assistant_name = if name.is_empty() { "Ayla".into() } else { name };
+        self.assistant_city = self
+            .assistant_city
+            .take()
+            .map(|c| c.trim().chars().take(60).collect::<String>())
+            .filter(|c| !c.is_empty());
     }
 }
 

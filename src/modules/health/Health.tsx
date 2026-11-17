@@ -507,7 +507,11 @@ const REFRESH_OF: Partial<Record<Tab, GuardCheck>> = { checks: "defender", defen
 
 export default function Health() {
   const [g, setG] = useState<GuardState | null>(null);
-  const [tab, setTab] = useState<Tab>("checks");
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = useGhost.getState().healthTab;
+    useGhost.setState({ healthTab: null });
+    return TABS.some(([id]) => id === t) ? (t as Tab) : "checks";
+  });
   const { busy, run } = useAsync();
   useEffect(() => {
     guard.state().then(setG, () => {});

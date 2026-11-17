@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { Assistant } from "../assistant/Assistant";
 import { isTauri } from "../ipc/api";
 import { useGhost, type ModuleId } from "../state/store";
 import { Boot } from "./Boot";
@@ -112,6 +113,7 @@ export function App() {
         )}
       </main>
       <GhostLine />
+      {isTauri && <Assistant />}
       {toast && (
         <div className={`toast toast--${toast.tone}`} role="status">
           {toast.text}

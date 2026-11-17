@@ -1,0 +1,245 @@
+/* Assistant: the hologram floats over the module; colour follows its state. */
+
+.ayla-dock,
+.ayla-panel {
+  --ayla: var(--arc);
+  --ayla-glow: var(--arc-glow);
+}
+.is-listening {
+  --ayla: var(--phosphor);
+  --ayla-glow: var(--phosphor-glow);
+}
+.is-medium {
+  --ayla: var(--sev-medium);
+  --ayla-glow: rgba(255, 181, 71, 0.18);
+}
+.is-high {
+  --ayla: var(--sev-high);
+  --ayla-glow: rgba(255, 122, 61, 0.2);
+}
+.is-critical {
+  --ayla: var(--sev-critical);
+  --ayla-glow: var(--signal-glow);
+}
+
+.ayla-holo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- collapsed: figure in the corner ---- */
+.ayla-dock {
+  position: fixed;
+  right: var(--s4);
+  bottom: calc(var(--line-h) + var(--s2));
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s2);
+  pointer-events: none;
+}
+.ayla-dock__fig {
+  pointer-events: auto;
+  position: relative;
+  width: 128px;
+  height: 172px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.ayla-dock__fig:focus-visible {
+  outline: 1px solid var(--ayla);
+  outline-offset: 2px;
+}
+.ayla-dock__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  font-size: var(--fs-s);
+  color: var(--ayla);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.ayla-dock__name i {
+  color: var(--text-faint);
+  font-style: normal;
+}
+.ayla-bubble {
+  pointer-events: auto;
+  max-width: 340px;
+  margin: 0 0 48px;
+  padding: var(--s2) var(--s3);
+  background: color-mix(in srgb, var(--graphite-1) 94%, transparent);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--ayla);
+  color: var(--text-bright);
+  font-size: var(--fs-m);
+  line-height: 1.45;
+  box-shadow: 0 0 24px var(--ayla-glow);
+  animation: ayla-in var(--t-med) var(--ease-out);
+}
+
+/* ---- expanded: conversation panel ---- */
+.ayla-panel {
+  position: fixed;
+  top: var(--chrome-h);
+  right: 0;
+  bottom: var(--line-h);
+  z-index: 45;
+  width: min(400px, 100vw);
+  display: grid;
+  grid-template-rows: auto 250px 1fr auto auto;
+  background: var(--graphite-0);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.45);
+  animation: ayla-slide var(--t-med) var(--ease-out);
+}
+.ayla-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+.ayla-panel__head > div {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  min-width: 0;
+}
+.ayla-panel__head b {
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.ayla-panel__head span {
+  font-size: var(--fs-s);
+  color: var(--ayla);
+}
+.ayla-panel__holo {
+  position: relative;
+  background: radial-gradient(ellipse at 50% 85%, var(--ayla-glow), transparent 60%);
+  border-bottom: 1px solid var(--line);
+}
+.ayla-sub {
+  position: absolute;
+  left: var(--s3);
+  right: var(--s3);
+  bottom: var(--s2);
+  margin: 0;
+  text-align: center;
+  color: var(--text-bright);
+  font-size: var(--fs-m);
+  line-height: 1.4;
+  text-shadow: 0 1px 6px #000;
+}
+
+.ayla-log {
+  overflow-y: auto;
+  padding: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.ayla-hint {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+  line-height: 1.5;
+}
+.ayla-line {
+  margin: 0;
+  max-width: 88%;
+  font-size: var(--fs-m);
+  line-height: 1.45;
+  user-select: text;
+}
+.ayla-line.is-user {
+  align-self: flex-end;
+  color: var(--text-dim);
+  text-align: right;
+}
+.ayla-line.is-ayla {
+  color: var(--text-bright);
+  padding-left: var(--s2);
+  border-left: 2px solid var(--arc-dim);
+}
+.ayla-line.is-alert {
+  cursor: pointer;
+  padding: var(--s1) var(--s2);
+  border-left: 2px solid var(--sev-medium);
+  background: var(--graphite-1);
+  color: var(--text-bright);
+}
+.ayla-line.sev-high {
+  border-left-color: var(--sev-high);
+}
+.ayla-line.sev-critical {
+  border-left-color: var(--sev-critical);
+}
+
+.ayla-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--graphite-2);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-s);
+  color: var(--text-bright);
+}
+.ayla-confirm span {
+  flex: 1;
+}
+
+.ayla-input {
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3) var(--s3);
+  border-top: 1px solid var(--line);
+}
+.ayla-input .field {
+  flex: 1;
+}
+.ayla-mic {
+  min-width: 72px;
+  border: 1px solid var(--ayla);
+  background: transparent;
+  color: var(--ayla);
+  font: inherit;
+  font-size: var(--fs-m);
+  cursor: pointer;
+  border-radius: 3px;
+}
+.ayla-mic:hover {
+  background: var(--ayla-glow);
+}
+.ayla-mic.is-on {
+  background: var(--phosphor);
+  border-color: var(--phosphor);
+  color: var(--void);
+}
+
+@keyframes ayla-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes ayla-slide {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ayla-bubble,
+  .ayla-panel {
+    animation: none;
+  }
+}

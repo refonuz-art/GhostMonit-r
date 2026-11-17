@@ -21,6 +21,15 @@ export interface AppSettings {
   remoteNotify: boolean;
   remoteMinSeverity: Severity;
   remoteDetails: boolean;
+  assistantEnabled: boolean;
+  assistantName: string;
+  assistantVoice: "windows" | "azure";
+  assistantAzureVoice: "tr-TR-EmelNeural" | "tr-TR-AhmetNeural";
+  assistantRate: number;
+  assistantSpeakAlerts: boolean;
+  assistantMinSeverity: Severity;
+  assistantFloat: boolean;
+  assistantCity: string | null;
 }
 
 export interface UpdateInfo {
@@ -32,7 +41,11 @@ export interface UpdateInfo {
 
 export const settingsApi = {
   get: () => invoke<AppSettings>("get_settings"),
-  save: (settings: AppSettings) => invoke<AppSettings>("save_settings", { settings }),
+  save: (settings: AppSettings) =>
+    invoke<AppSettings>("save_settings", { settings }).then((saved) => {
+      window.dispatchEvent(new CustomEvent<AppSettings>("gm-settings", { detail: saved }));
+      return saved;
+    }),
   quit: () => invoke<void>("quit_app"),
   checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
   installUpdate: () => invoke<void>("install_update"),

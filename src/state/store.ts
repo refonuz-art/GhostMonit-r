@@ -44,6 +44,8 @@ interface GhostState {
   focusPid: number | null;
   processQuery: string;
   toast: { text: string; tone: "ok" | "warn" | "bad" } | null;
+  /** Tab the Sağlık screen opens on next (set by the assistant). */
+  healthTab: string | null;
 
   setModule: (m: ModuleId) => void;
   focusProcess: (pid: number | null) => void;
@@ -76,6 +78,7 @@ export const useGhost = create<GhostState>((set) => ({
   focusPid: null,
   processQuery: "",
   toast: null,
+  healthTab: null,
 
   setModule: (module) => set({ module }),
   focusProcess: (pid) => set(pid === null ? { focusPid: null } : { focusPid: pid, module: "process" }),

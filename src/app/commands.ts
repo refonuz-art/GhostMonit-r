@@ -1,4 +1,6 @@
 // Command interpreter shared by the Ghost Line (and later the full Terminal module).
+import { handle } from "../assistant/agent";
+import { useAyla } from "../assistant/store";
 import { api } from "../ipc/api";
 import { useGhost } from "../state/store";
 import { MODULES } from "./modules";
@@ -61,5 +63,11 @@ export async function runCommand(input: string): Promise<CommandResult> {
     }
   }
 
+  // Anything else is a sentence for the assistant ("opera'yı aç", "hava nasıl").
+  if (useAyla.getState().enabled) {
+    useAyla.getState().setOpen(true);
+    void handle(raw);
+    return { ok: true, text: "" };
+  }
   return { ok: false, text: `Bilinmeyen komut: ${head}. “yardım” yazın.` };
 }

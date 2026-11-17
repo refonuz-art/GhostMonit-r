@@ -1,7 +1,9 @@
+mod assistant;
 mod collectors;
 mod commands;
 mod commands_intel;
 mod commands_guard;
+mod commands_assistant;
 mod engine;
 mod guard;
 mod intel;
@@ -146,6 +148,16 @@ pub fn run() {
             commands_guard::lan_sweep,
             commands_guard::net_usage,
             commands_guard::suspend_process,
+            commands_assistant::assistant_status,
+            commands_assistant::assistant_set_azure,
+            commands_assistant::assistant_set_claude,
+            commands_assistant::assistant_tts,
+            commands_assistant::assistant_stt,
+            commands_assistant::assistant_find_app,
+            commands_assistant::assistant_launch,
+            commands_assistant::assistant_open_url,
+            commands_assistant::assistant_weather,
+            commands_assistant::assistant_ask,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ghost Monitor");

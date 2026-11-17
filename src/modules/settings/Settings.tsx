@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../../ipc/api";
 import { guard } from "../../ipc/guard";
+import { assistantApi, type AssistantStatus } from "../../ipc/assistant";
+import * as voice from "../../assistant/voice";
 import { intel } from "../../ipc/intel";
 import { settingsApi, type AppSettings, type UpdateInfo } from "../../ipc/settings";
 import { on } from "../../ipc/api";
@@ -88,6 +90,97 @@ function FeedKey({ hasKey, onChange }: { hasKey: boolean; onChange: (v: boolean)
   );
 }
 
+
+/** Azure Speech and Claude keys for the assistant; DPAPI-encrypted, never shown again. */
+function AssistantKeys({ status, onChange }: { status: AssistantStatus | null; onChange: (s: AssistantStatus) => void }) {
+  const notify = useGhost((s) => s.notify);
+  const [azKey, setAzKey] = useState("");
+  const [region, setRegion] = useState("westeurope");
+  const [cKey, setCKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<AssistantStatus>, ok: string) => {
+    setBusy(true);
+    try {
+      onChange(await fn());
+      window.dispatchEvent(new Event("gm-assistant-keys"));
+      setAzKey("");
+      setCKey("");
+      notify(ok);
+    } catch (e) {
+      notify(String(e), "bad");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="st-phone">
+      {status?.azure ? (
+        <div className="st-phone__row">
+          <span className="st-ok">Azure Speech bağlı ({status.azureRegion})</span>
+          <button className="btn btn--quiet" disabled={busy} onClick={() => run(() => assistantApi.setAzure(null, null), "Azure anahtarı silindi")}>
+            Kaldır
+          </button>
+        </div>
+      ) : (
+        <form
+          className="st-key"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => assistantApi.setAzure(azKey, region), "Azure Speech anahtarı şifrelenerek kaydedildi");
+          }}
+        >
+          <input className="field" type="password" placeholder="Azure Speech anahtarı" value={azKey} onChange={(e) => setAzKey(e.target.value)} />
+          <input className="field" placeholder="bölge" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 100 }} />
+          <button className="btn" disabled={busy || !azKey.trim() || !region.trim()}>
+            Kaydet
+          </button>
+        </form>
+      )}
+      {status?.claude ? (
+        <div className="st-phone__row">
+          <span className="st-ok">Claude bağlı</span>
+          <button className="btn btn--quiet" disabled={busy} onClick={() => run(() => assistantApi.setClaude(null), "Claude anahtarı silindi")}>
+            Kaldır
+          </button>
+        </div>
+      ) : (
+        <form
+          className="st-key"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => assistantApi.setClaude(cKey), "Claude anahtarı şifrelenerek kaydedildi");
+          }}
+        >
+          <input className="field" type="password" placeholder="Claude API anahtarı (sk-ant-…)" value={cKey} onChange={(e) => setCKey(e.target.value)} />
+          <button className="btn" disabled={busy || !cKey.trim()}>
+            Kaydet
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/** City field that saves on blur / Enter rather than on every keystroke. */
+function CityField({ value, onSave }: { value: string | null; onSave: (v: string | null) => void }) {
+  const [v, setV] = useState(value ?? "");
+  useEffect(() => setV(value ?? ""), [value]);
+  const commit = () => {
+    const t = v.trim();
+    if (t !== (value ?? "")) onSave(t || null);
+  };
+  return (
+    <input
+      className="field"
+      placeholder="ör. İstanbul"
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && commit()}
+      style={{ width: 160 }}
+    />
+  );
+}
 
 /** Telegram bot / Discord webhook credentials, stored DPAPI-encrypted; never shown again. */
 function PhoneSetup({ status, onChange }: { status: { telegram: boolean; discord: boolean }; onChange: () => void }) {
@@ -247,10 +340,12 @@ export default function Settings() {
   const [feedKey, setFeedKey] = useState(false);
   const [phone, setPhone] = useState({ telegram: false, discord: false });
   const loadPhone = () => guard.remoteStatus().then(setPhone, () => {});
+  const [asst, setAsst] = useState<AssistantStatus | null>(null);
 
   useEffect(() => {
     intel.abuseHasKey().then(setFeedKey, () => {});
     loadPhone();
+    assistantApi.status().then(setAsst, () => {});
     settingsApi.get().then(setS, (e) => notify(`Ayarlar okunamadı: ${e}`, "bad"));
   }, [notify]);
 
@@ -432,6 +527,86 @@ export default function Settings() {
             hint="Kapalıyken yalnızca olay başlığı ve bilgisayar adı gider. Açıkken dosya yolları ve IP adresleri de mesaja eklenir."
           >
             <Switch label="Ayrıntıları gönder" on={s.remoteDetails} onChange={(v) => save({ remoteDetails: v })} />
+          </Row>
+        </section>
+
+        <section>
+          <h3>Asistan</h3>
+          <Row
+            title={`Sesli asistan (${s.assistantName})`}
+            hint="Önemli uyarıları sesli ve ekranda bildirir, komutlarınızı yerine getirir. Ekranın sağ altındaki figüre tıklayın ya da Ctrl+Boşluk'a basıp konuşun."
+          >
+            <Switch label="Sesli asistan" on={s.assistantEnabled} onChange={(v) => save({ assistantEnabled: v })} />
+          </Row>
+          <Row title="Figürü ekranda göster" hint="Kapalıyken asistan yine konuşur; panel Ctrl+Boşluk ile açılır.">
+            <Switch label="Figür" on={s.assistantFloat} onChange={(v) => save({ assistantFloat: v })} />
+          </Row>
+          <Row title="Uyarıları sesli oku" hint="Seçilen düzey ve üstündeki yeni olaylar sesli okunur. Arka arkaya gelen uyarılar tek cümlede toplanır.">
+            <Switch label="Sesli uyarı" on={s.assistantSpeakAlerts} onChange={(v) => save({ assistantSpeakAlerts: v })} />
+          </Row>
+          <Row title="Sesli uyarı düzeyi" hint="Daha düşük düzeyler yalnızca panelde görünür.">
+            <Seg value={s.assistantMinSeverity} options={SEVERITIES.slice(1)} onChange={(v) => save({ assistantMinSeverity: v })} />
+          </Row>
+          <Row
+            title="Ses"
+            hint="Windows sesi bilgisayarda yüklü Türkçe sesi kullanır ve internetsiz çalışır. Azure sesi çok daha doğal bir kadın (Emel) ya da erkek (Ahmet) sesidir; Azure Speech anahtarı ister ve okunacak metni Microsoft'a gönderir."
+            note={asst?.azure ? undefined : "Azure sesi için önce aşağıdan anahtar ekleyin."}
+          >
+            <Seg
+              value={s.assistantVoice}
+              options={[
+                ["windows", "Windows"],
+                ["azure", "Azure (doğal)"],
+              ]}
+              onChange={(v) => (v === "azure" && !asst?.azure ? notify("Önce Azure Speech anahtarını ekleyin", "warn") : save({ assistantVoice: v }))}
+            />
+            {s.assistantVoice === "azure" && (
+              <Seg
+                value={s.assistantAzureVoice}
+                options={[
+                  ["tr-TR-EmelNeural", "Emel"],
+                  ["tr-TR-AhmetNeural", "Ahmet"],
+                ]}
+                onChange={(v) => save({ assistantAzureVoice: v })}
+              />
+            )}
+          </Row>
+          <Row title="Konuşma hızı" hint="Sesi denemek için yandaki düğmeyi kullanın.">
+            <Seg
+              value={s.assistantRate}
+              options={[
+                [0.9, "Yavaş"],
+                [1, "Normal"],
+                [1.15, "Hızlı"],
+              ]}
+              onChange={(v) => save({ assistantRate: v })}
+            />
+            <button
+              className="btn"
+              onClick={() => {
+                voice.configure(s.assistantVoice === "azure" && asst?.azure ? "azure" : "windows", s.assistantRate);
+                void voice.say(`Merhaba, ben ${s.assistantName}. Bilgisayarınızı izliyorum; şüpheli bir durum olursa sizi hemen uyaracağım.`, true);
+              }}
+            >
+              Sesi dene
+            </button>
+          </Row>
+          <Row title="Şehir" hint="“Hava nasıl?” sorusu için. Yalnızca hava durumu sorulduğunda şehir adı Open-Meteo servisine gönderilir.">
+            <CityField value={s.assistantCity} onSave={(v) => save({ assistantCity: v })} />
+          </Row>
+          <Row
+            title="Sesli komut ve doğal ses"
+            hint="Türkçe konuşmayı tanımak ve doğal ses için Azure Speech kullanılır (portal.azure.com → Speech hizmeti; ücretsiz katman ayda 5 saat tanıma ve 500 bin karakter ses içerir). Anahtar yoksa asistan yazılı komutlarla ve Windows sesiyle çalışır."
+            note="Konuşma yalnızca Konuş düğmesine ya da Ctrl+Boşluk'a bastığınızda kaydedilir; sürekli dinleme yoktur."
+          >
+            <AssistantKeys status={asst} onChange={setAsst} />
+          </Row>
+          <Row
+            title="Serbest sohbet (Claude)"
+            hint="Yerel komutların dışındaki her soru (genel bilgi, güncel haberler, açıklamalar) Claude'a gönderilir. Anahtar yoksa bu özellik kapalıdır; yerel komutlar yine çalışır."
+            note="Gönderilen: sorunuz, konuşma geçmişi ve istendiğinde güvenlik durumu özeti."
+          >
+            <span className="dim">{asst?.claude ? "açık" : "anahtar bekleniyor"}</span>
           </Row>
         </section>
 
