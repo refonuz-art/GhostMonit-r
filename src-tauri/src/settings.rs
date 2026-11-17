@@ -100,15 +100,31 @@ impl Default for AppSettings {
 
 impl AppSettings {
     pub fn load(st: &Store) -> Self {
-        let mut s: Self = st
-            .setting(KEY)
-            .ok()
-            .flatten()
-            .and_then(|v| serde_json::from_str(&v).ok())
-            .unwrap_or_default();
+        let mut s = st.setting(KEY).ok().flatten().map(|v| Self::parse_lenient(&v)).unwrap_or_default();
         s.autostart = autostart_enabled();
         s.clamp();
         s
+    }
+
+    /// Keeps every saved value that still parses. One field a newer or older version no
+    /// longer understands falls back to its default instead of resetting all settings.
+    fn parse_lenient(raw: &str) -> Self {
+        use serde_json::Value;
+        if let Ok(s) = serde_json::from_str(raw) {
+            return s;
+        }
+        let Ok(Value::Object(saved)) = serde_json::from_str::<Value>(raw) else { return Self::default() };
+        let Ok(Value::Object(mut merged)) = serde_json::to_value(Self::default()) else { return Self::default() };
+        for (k, v) in saved {
+            let prev = merged.insert(k.clone(), v);
+            if serde_json::from_value::<Self>(Value::Object(merged.clone())).is_err() {
+                match prev {
+                    Some(p) => merged.insert(k, p),
+                    None => merged.remove(&k),
+                };
+            }
+        }
+        serde_json::from_value(Value::Object(merged)).unwrap_or_default()
     }
 
     pub fn save(&self, st: &Store) -> Result<(), String> {
@@ -172,6 +188,18 @@ pub fn set_autostart(on: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_bad_field_does_not_reset_the_rest() {
+        let st = Store::open_memory().unwrap();
+        st.set_setting(KEY, r#"{"remoteNotify":true,"assistantName":"Lilith","remoteMinSeverity":"APOCALYPSE","notify":"maybe"}"#)
+            .unwrap();
+        let s = AppSettings::load(&st);
+        assert!(s.remote_notify, "valid value kept");
+        assert_eq!(s.assistant_name, "Lilith");
+        assert_eq!(s.remote_min_severity, AppSettings::default().remote_min_severity, "bad enum falls back");
+        assert_eq!(s.notify, AppSettings::default().notify, "bad type falls back");
+    }
 
     #[test]
     fn missing_fields_take_defaults_and_values_are_clamped() {
