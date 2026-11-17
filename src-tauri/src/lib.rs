@@ -162,6 +162,9 @@ pub fn run() {
             commands_assistant::portrait_get,
             commands_assistant::portrait_set,
             commands_assistant::portrait_clear,
+            commands_assistant::ayla_video_get,
+            commands_assistant::ayla_video_set,
+            commands_assistant::ayla_video_clear,
             commands_assistant::assistant_ask,
             commands_assistant::assistant_install_stt,
         ])

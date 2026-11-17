@@ -7,7 +7,7 @@ import { settingsApi, type AppSettings } from "../ipc/settings";
 import type { SecurityEvent, Severity } from "../ipc/types";
 import { useGhost } from "../state/store";
 import { configureAgent, handle, resetConversation } from "./agent";
-import { Hologram } from "./Hologram";
+import { AylaFigure } from "./AylaVideo";
 import { record, type Recording } from "./mic";
 import { useAyla, type Mode } from "./store";
 import * as voice from "./voice";
@@ -215,7 +215,7 @@ export function Assistant() {
           </p>
         )}
         <button className="ayla-dock__fig" onClick={() => ay().setOpen(true)} title={`${name} ile konuş (Ctrl+Boşluk)`}>
-          <Hologram mode={mode} alert={alert} level={level} />
+          <AylaFigure mode={mode} alert={alert} level={level} />
           <span className="ayla-dock__name">
             {name}
             {muted && <i> · sessiz</i>}
@@ -255,7 +255,7 @@ export function Assistant() {
       </header>
 
       <div className="ayla-panel__holo">
-        <Hologram mode={mode} alert={alert} level={level} />
+        <AylaFigure mode={mode} alert={alert} level={level} />
         {subtitle && <p className="ayla-sub">{subtitle}</p>}
       </div>
 

@@ -154,3 +154,46 @@ pub fn portrait_clear(s: S) -> R<()> {
     }
     Ok(())
 }
+
+// ---- Ayla videos: an idle loop and an optional talking loop, also kept in the data folder ----
+
+const VIDEO_MAX: usize = 200 * 1024 * 1024;
+
+fn video_path(s: &Shared, slot: &str) -> R<std::path::PathBuf> {
+    match slot {
+        "idle" | "talk" => Ok(std::path::PathBuf::from(&s.host.read().data_dir).join(format!("ayla-{slot}.vid"))),
+        _ => Err("Bilinmeyen video yuvası".into()),
+    }
+}
+
+/// The saved video's bytes for `slot` ("idle" | "talk"), or an empty body when none is set.
+#[tauri::command]
+pub fn ayla_video_get(s: S, slot: String) -> R<Response> {
+    let p = video_path(&s, &slot)?;
+    Ok(Response::new(if p.is_file() { std::fs::read(p).map_err(|e| e.to_string())? } else { Vec::new() }))
+}
+
+/// Save an MP4/WebM sent as the raw body; the slot comes in the `slot` header.
+#[tauri::command]
+pub fn ayla_video_set(s: S, request: Request<'_>) -> R<()> {
+    let slot = request.headers().get("slot").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    let p = video_path(&s, &slot)?;
+    let InvokeBody::Raw(v) = request.body() else { return Err("Video bekleniyordu".into()) };
+    if v.len() > VIDEO_MAX {
+        return Err("Video 200 MB'tan büyük olamaz".into());
+    }
+    let ok = (v.len() > 12 && &v[4..8] == b"ftyp") || v.starts_with(&[0x1A, 0x45, 0xDF, 0xA3]);
+    if !ok {
+        return Err("Yalnızca MP4 ya da WebM videolar kullanılabilir".into());
+    }
+    std::fs::write(p, v).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn ayla_video_clear(s: S, slot: String) -> R<()> {
+    let p = video_path(&s, &slot)?;
+    if p.is_file() {
+        std::fs::remove_file(p).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}

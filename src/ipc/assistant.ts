@@ -19,6 +19,7 @@ export interface NowPlaying {
   position: number | null;
   duration: number | null;
 }
+export type VideoSlot = "idle" | "talk";
 export interface AppEntry {
   name: string;
   target: string;
@@ -70,6 +71,9 @@ export const assistantApi = {
   portraitGet: () => invoke<ArrayBuffer>("portrait_get"),
   portraitSet: (img: Uint8Array) => invoke<void>("portrait_set", img),
   portraitClear: () => invoke<void>("portrait_clear"),
+  videoGet: (slot: VideoSlot) => invoke<ArrayBuffer>("ayla_video_get", { slot }),
+  videoSet: (slot: VideoSlot, v: Uint8Array) => invoke<void>("ayla_video_set", v, { headers: { slot } }),
+  videoClear: (slot: VideoSlot) => invoke<void>("ayla_video_clear", { slot }),
   installStt: () => invoke<AssistantStatus>("assistant_install_stt"),
   ask: (system: unknown, messages: ClaudeMessage[], tools: unknown[]) =>
     invoke<ClaudeResponse>("assistant_ask", { system, messages, tools }),

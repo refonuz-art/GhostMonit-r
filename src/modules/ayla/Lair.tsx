@@ -4,12 +4,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { handle } from "../../assistant/agent";
 import { Hologram } from "../../assistant/Hologram";
+import { AylaVideo, type VideoState } from "../../assistant/AylaVideo";
 import { Portrait, type PortraitState } from "../../assistant/Portrait";
 import { useAyla, type Mode } from "../../assistant/store";
 import * as voice from "../../assistant/voice";
 import { bytes, duration, rate } from "../../design/format";
 import { Icon } from "../../design/icons";
-import { assistantApi, type AppEntry, type NowPlaying } from "../../ipc/assistant";
+import { assistantApi, type AppEntry, type NowPlaying, type VideoSlot } from "../../ipc/assistant";
 import { settingsApi } from "../../ipc/settings";
 import { activeRemote, securityLevel } from "../../state/derive";
 import { useGhost } from "../../state/store";
@@ -321,20 +322,38 @@ function Launchers() {
   );
 }
 
-type View = "holo" | "portrait";
+type View = "holo" | "portrait" | "video";
 const VIEW_KEY = "gm.ayla.view";
+const VIEWS: [View, string][] = [
+  ["holo", "Hologram"],
+  ["portrait", "Görsel"],
+  ["video", "Video"],
+];
 
 function readView(): View {
   try {
-    return localStorage.getItem(VIEW_KEY) === "holo" ? "holo" : "portrait";
+    const v = localStorage.getItem(VIEW_KEY);
+    return v === "holo" || v === "portrait" ? v : "video";
   } catch {
-    return "portrait";
+    return "video";
   }
 }
 
-/** Switch between the point-cloud hologram and the animated picture; replace the picture. */
-function ViewSwitch({ view, setView, pstate }: { view: View; setView: (v: View) => void; pstate: PortraitState }) {
+/** Switch between hologram, animated picture and video loops; replace the picture or videos. */
+function ViewSwitch({
+  view,
+  setView,
+  pstate,
+  vids,
+}: {
+  view: View;
+  setView: (v: View) => void;
+  pstate: PortraitState;
+  vids: Record<VideoSlot, boolean>;
+}) {
   const file = useRef<HTMLInputElement>(null);
+  const vfile = useRef<HTMLInputElement>(null);
+  const slot = useRef<VideoSlot>("idle");
   const notify = useGhost((s) => s.notify);
   const pick = async (f: File | undefined) => {
     if (!f) return;
@@ -347,21 +366,55 @@ function ViewSwitch({ view, setView, pstate }: { view: View; setView: (v: View) 
       notify(String(e), "bad");
     }
   };
+  const pickVideo = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      await assistantApi.videoSet(slot.current, new Uint8Array(await f.arrayBuffer()));
+      window.dispatchEvent(new Event("gm-video"));
+      setView("video");
+      notify(slot.current === "idle" ? "Bekleme videosu kaydedildi" : "Konuşma videosu kaydedildi");
+    } catch (e) {
+      notify(String(e), "bad");
+    }
+  };
+  const chooseVideo = (s: VideoSlot) => {
+    slot.current = s;
+    vfile.current?.click();
+  };
   return (
     <div className="lair-view">
       <div className="lair-view__seg" role="group" aria-label="Görünüm">
-        <button className={view === "holo" ? "is-on" : ""} onClick={() => setView("holo")} aria-pressed={view === "holo"}>
-          Hologram
-        </button>
-        <button className={view === "portrait" ? "is-on" : ""} onClick={() => setView("portrait")} aria-pressed={view === "portrait"}>
-          Görsel
-        </button>
+        {VIEWS.map(([v, label]) => (
+          <button key={v} className={view === v ? "is-on" : ""} onClick={() => setView(v)} aria-pressed={view === v}>
+            {label}
+          </button>
+        ))}
       </div>
       {view === "portrait" && (
         <button className="lair-link" onClick={() => file.current?.click()}>
           {pstate === "none" ? "Görsel seç" : "Görseli değiştir"}
         </button>
       )}
+      {view === "video" && (
+        <>
+          <button className="lair-link" onClick={() => chooseVideo("idle")}>
+            {vids.idle ? "Bekleme videosunu değiştir" : "Bekleme videosu seç"}
+          </button>
+          <button className="lair-link" onClick={() => chooseVideo("talk")}>
+            {vids.talk ? "Konuşma videosunu değiştir" : "Konuşma videosu ekle"}
+          </button>
+        </>
+      )}
+      <input
+        ref={vfile}
+        type="file"
+        accept="video/mp4,video/webm"
+        hidden
+        onChange={(e) => {
+          void pickVideo(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
       <input
         ref={file}
         type="file"
@@ -400,6 +453,12 @@ export default function Lair() {
     setPstate(st);
     if (r !== undefined) setRigged(r);
   }, []);
+  const [vstate, setVstate] = useState<VideoState>("loading");
+  const [vids, setVids] = useState<Record<VideoSlot, boolean>>({ idle: false, talk: false });
+  const onVideo = useCallback((st: VideoState, has: Record<VideoSlot, boolean>) => {
+    setVstate(st);
+    setVids(has);
+  }, []);
   const submit = () => {
     const v = text.trim();
     setText("");
@@ -419,6 +478,12 @@ export default function Lair() {
       <div className="lair-stage">
         {view === "holo" ? (
           <Hologram mode={mode} alert={alert} level={level} variant="stage" />
+        ) : view === "video" ? (
+          <>
+            <AylaVideo mode={mode} alert={alert} level={level} onState={onVideo} />
+            {vstate === "none" && <p className="lair-empty">Henüz video seçilmedi. Üstteki “Bekleme videosu seç” ile bir MP4 ya da WebM yükleyin.</p>}
+            {vstate === "error" && <p className="lair-empty">Video açılamadı. Başka bir dosya deneyin ya da başka bir görünüme geçin.</p>}
+          </>
         ) : (
           <>
             <Portrait mode={mode} alert={alert} level={level} onState={onPortrait} />
@@ -429,7 +494,7 @@ export default function Lair() {
             )}
           </>
         )}
-        <ViewSwitch view={view} setView={setView} pstate={pstate} />
+        <ViewSwitch view={view} setView={setView} pstate={pstate} vids={vids} />
         {subtitle && <p className="lair-sub">{subtitle}</p>}
         <div className="lair-bottom">
           <Launchers />

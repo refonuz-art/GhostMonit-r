@@ -13,3 +13,4 @@ src-tauri/gen/
 
 # user artwork (kept out of the public repo)
 hologram.jpeg
+kling_*.mp4
