@@ -536,3 +536,6 @@
   bottom: 150px;
   font-size: var(--fs-s);
 }
+.lair-view .lair-link {
+  white-space: nowrap;
+}
