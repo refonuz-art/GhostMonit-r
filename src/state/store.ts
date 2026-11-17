@@ -19,7 +19,8 @@ export type ModuleId =
   | "terminal"
   | "report"
   | "health"
-  | "settings";
+  | "settings"
+  | "ayla";
 
 const HISTORY = 180; // 3 minutes at 1 Hz
 

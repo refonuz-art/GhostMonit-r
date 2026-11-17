@@ -28,6 +28,8 @@ interface AylaState {
   /** Alerts are still shown but not spoken. */
   muted: boolean;
   subtitle: string | null;
+  /** Push-to-talk, provided by the Assistant component so other screens can start listening. */
+  talk: () => void;
   setOpen: (v: boolean) => void;
   setMode: (m: Mode) => void;
   add: (who: Line["who"], text: string, severity?: Severity) => void;
@@ -48,6 +50,7 @@ export const useAyla = create<AylaState>((set) => ({
   alert: null,
   muted: false,
   subtitle: null,
+  talk: () => {},
   setOpen: (open) => set({ open }),
   setMode: (mode) => set({ mode }),
   add: (who, text, severity) =>

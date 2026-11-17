@@ -19,6 +19,7 @@ const Terminal = lazy(() => import("../modules/terminal/Terminal"));
 const Reports = lazy(() => import("../modules/report/Reports"));
 const Health = lazy(() => import("../modules/health/Health"));
 const Settings = lazy(() => import("../modules/settings/Settings"));
+const Lair = lazy(() => import("../modules/ayla/Lair"));
 
 class ModuleBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -64,6 +65,8 @@ function ModuleView({ id }: { id: ModuleId }) {
       return <Health />;
     case "settings":
       return <Settings />;
+    case "ayla":
+      return <Lair />;
     default:
       return null;
   }

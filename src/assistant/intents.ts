@@ -86,6 +86,7 @@ export const MODULE_WORDS: [string, ModuleId, string][] = [
   ["sağlık", "health", "Sağlık"],
   ["koruma", "health", "Sağlık"],
   ["ayar", "settings", "Ayarlar"],
+  ["hologram", "ayla", "Ayla"],
 ];
 
 /** A module named by `phrase` ("sağlık ekranını", "tehdit sekmesi", "ayarları"). */

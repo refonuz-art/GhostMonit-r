@@ -39,6 +39,8 @@ maxminddb = "0.33"
 [dependencies.windows]
 version = "0.62"
 features = [
+  "Foundation",
+  "Media_Control",
   "Win32_Foundation",
   "Win32_NetworkManagement_IpHelper",
   "Win32_NetworkManagement_Ndis",

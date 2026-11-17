@@ -157,6 +157,8 @@ pub fn run() {
             commands_assistant::assistant_launch,
             commands_assistant::assistant_open_url,
             commands_assistant::assistant_weather,
+            commands_assistant::media_now,
+            commands_assistant::media_control,
             commands_assistant::assistant_ask,
             commands_assistant::assistant_install_stt,
         ])

@@ -21,4 +21,5 @@ export const MODULES: ModuleDef[] = [
   { id: "terminal", label: "Terminal", aliases: ["terminal", "konsol"], icon: Icon.terminal, ready: true },
   { id: "report", label: "Rapor", aliases: ["rapor", "report"], icon: Icon.report, ready: true },
   { id: "health", label: "Sağlık", aliases: ["sağlık", "saglik", "health", "koruma"], icon: Icon.shield, ready: true },
+  { id: "ayla", label: "Ayla", aliases: ["ayla", "hologram", "asistan"], icon: Icon.horns, ready: true },
 ];

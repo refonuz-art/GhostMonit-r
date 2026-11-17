@@ -6,7 +6,7 @@ use serde_json::Value;
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::State;
 
-use crate::assistant::{self, apps, brain, speech, weather, whisper};
+use crate::assistant::{self, apps, brain, media, speech, weather, whisper};
 use crate::state::Shared;
 
 type S<'a> = State<'a, Arc<Shared>>;
@@ -101,4 +101,16 @@ pub async fn assistant_weather(s: State<'_, Arc<Shared>>, city: Option<String>) 
 pub async fn assistant_ask(s: State<'_, Arc<Shared>>, system: Value, messages: Value, tools: Value) -> R<Value> {
     let shared = s.inner().clone();
     blocking(move || brain::ask(&shared, system, messages, tools)).await
+}
+
+/// What Windows' media session is playing (None when nothing is).
+#[tauri::command]
+pub async fn media_now() -> R<Option<media::NowPlaying>> {
+    blocking(media::now).await
+}
+
+/// "toggle" | "next" | "prev" on the current media session.
+#[tauri::command]
+pub async fn media_control(action: String) -> R<()> {
+    blocking(move || media::control(&action)).await
 }

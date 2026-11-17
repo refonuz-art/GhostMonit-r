@@ -53,7 +53,7 @@ export function TitleBar() {
             data-id={m.id}
             className={`chrome__tab${m.id === module ? " is-active" : ""}${m.ready ? "" : " is-planned"}`}
             onClick={() => setModule(m.id)}
-            title={`${m.label} (Ctrl+${(i + 1) % 10})${m.ready ? "" : " — henüz geliştirilmedi"}`}
+            title={`${m.label}${i < 10 ? ` (Ctrl+${(i + 1) % 10})` : ""}${m.ready ? "" : " — henüz geliştirilmedi"}`}
           >
             <m.icon />
             <span>{m.label}</span>

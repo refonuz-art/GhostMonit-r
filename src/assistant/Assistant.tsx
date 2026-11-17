@@ -38,6 +38,7 @@ export function Assistant() {
   const { open, mode, lines, pending, alert, subtitle, muted } = useAyla();
   const ay = useAyla.getState;
   const setModule = useGhost((s) => s.setModule);
+  const onStage = useGhost((s) => s.module === "ayla");
   const [text, setText] = useState("");
   const rec = useRef<Recording | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -131,7 +132,7 @@ export function Assistant() {
       rec.current.finish();
       return;
     }
-    s.setOpen(true);
+    if (useGhost.getState().module !== "ayla") s.setOpen(true);
     if (!st?.azure && !st?.localStt) {
       const msg =
         "Sesli komut için konuşma tanımayı kurmam gerekiyor. Ayarlar'daki Asistan bölümünden “Konuşma tanımayı kur” düğmesine basın; internetsiz çalışır. Şimdilik yazarak konuşabiliriz.";
@@ -172,6 +173,8 @@ export function Assistant() {
     }
   }, [st, ay]);
 
+  useEffect(() => useAyla.setState({ talk: listen }), [listen]);
+
   // Ctrl+Space: talk. Escape (in the panel): close.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -191,6 +194,8 @@ export function Assistant() {
   const level = useCallback(() => (rec.current ? rec.current.level() : voice.level()), []);
 
   if (!cfg?.assistantEnabled) return null;
+  // The Ayla screen shows her full size; no corner figure or side panel there.
+  if (onStage) return null;
   const name = cfg.assistantName;
   const tone = alert ? ` is-${alert.toLowerCase()}` : ` is-${mode}`;
 

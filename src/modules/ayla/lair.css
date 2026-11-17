@@ -1,0 +1,483 @@
+/* Ayla's screen: blood-red light on black. Panels are thin frames with bright corner
+   brackets so the hologram stays the brightest thing on screen. */
+
+.lair {
+  --blood: #ff2a3d;
+  --blood-soft: rgba(255, 42, 61, 0.32);
+  --blood-faint: rgba(255, 42, 61, 0.08);
+  --bone: #f3dadd;
+  --ash: #a7767c;
+  --pit: #060203;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
+  gap: var(--s4);
+  padding: var(--s4);
+  color: var(--bone);
+  background:
+    radial-gradient(ellipse 45% 60% at 52% 42%, rgba(160, 8, 24, 0.28), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.75)),
+    repeating-linear-gradient(0deg, rgba(255, 42, 61, 0.025) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(255, 42, 61, 0.025) 0 1px, transparent 1px 28px),
+    var(--pit);
+  overflow: hidden;
+}
+.lair.is-listening {
+  --blood: #ff7a2e;
+  --blood-soft: rgba(255, 122, 46, 0.34);
+}
+.lair.is-critical {
+  --blood: #ffd9dc;
+}
+
+.lair-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-height: 0;
+}
+
+/* Frame: hairline border, bright corner brackets, faint inner glow. */
+.lair-frame {
+  position: relative;
+  padding: var(--s3);
+  border: 1px solid var(--blood-faint);
+  background: linear-gradient(180deg, rgba(40, 4, 10, 0.55), rgba(14, 2, 4, 0.7));
+  box-shadow: inset 0 0 28px rgba(255, 30, 50, 0.05);
+}
+.lair-frame::before,
+.lair-frame::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+.lair-frame::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--blood);
+  border-left: 2px solid var(--blood);
+}
+.lair-frame::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid var(--blood);
+  border-bottom: 2px solid var(--blood);
+}
+.lair-frame > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+  padding-bottom: var(--s1);
+  border-bottom: 1px solid var(--blood-faint);
+}
+.lair-frame h2 {
+  margin: 0;
+  font-size: var(--fs-l);
+  font-weight: 600;
+  color: var(--blood);
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 12px var(--blood-soft);
+}
+.lair-frame > header > span {
+  font-size: var(--fs-s);
+  color: var(--ash);
+}
+.lair-muted {
+  margin: 0;
+  color: var(--ash);
+  font-size: var(--fs-s);
+}
+.lair-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ash);
+  font-size: var(--fs-s);
+  cursor: pointer;
+}
+.lair-link:hover,
+.lair-link:focus-visible {
+  color: var(--blood);
+}
+
+/* Clock */
+.lair-clock time {
+  display: block;
+  font-family: var(--font-data);
+  font-size: 44px;
+  line-height: 1;
+  color: var(--blood);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 18px var(--blood-soft);
+}
+.lair-clock p {
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-m);
+  color: var(--bone);
+}
+.lair-clock small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-s);
+  color: var(--ash);
+}
+
+/* Sparkline */
+.lair-spark {
+  display: block;
+  width: 100%;
+  height: 44px;
+}
+.lair-spark--empty {
+  height: 44px;
+  border-bottom: 1px dashed var(--blood-faint);
+}
+.lair-spark .fill {
+  fill: rgba(255, 42, 61, 0.16);
+}
+.lair-spark .line {
+  fill: none;
+  stroke: var(--blood);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Rings */
+.lair-rings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.lair-ring {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.lair-ring svg {
+  width: 60px;
+  height: 60px;
+}
+.lair-ring .track {
+  fill: none;
+  stroke: rgba(255, 42, 61, 0.14);
+  stroke-width: 4;
+}
+.lair-ring .val {
+  fill: none;
+  stroke: var(--blood);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px var(--blood-soft));
+  transition: stroke-dasharray 600ms var(--ease-out);
+}
+.lair-ring b {
+  position: absolute;
+  top: 20px;
+  font-family: var(--font-data);
+  font-size: var(--fs-s);
+  font-weight: 500;
+  color: var(--bone);
+}
+.lair-ring span {
+  font-size: var(--fs-xs);
+  color: var(--ash);
+  text-align: center;
+}
+
+/* Network */
+.lair-net {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--s3);
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-s);
+}
+.lair-net dt {
+  color: var(--ash);
+}
+.lair-net dd {
+  margin: 0;
+  font-family: var(--font-data);
+  color: var(--bone);
+  text-align: right;
+}
+
+/* Conversation */
+.lair-talk {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lair-talk__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  font-size: var(--fs-m);
+  line-height: 1.45;
+}
+.lair-talk__log p {
+  margin: 0;
+}
+.lair-talk__log .is-user {
+  color: var(--ash);
+  padding-left: var(--s2);
+  border-left: 1px solid var(--blood-faint);
+}
+.lair-talk__log .is-ayla {
+  color: var(--bone);
+}
+.lair-talk__log .is-alert {
+  color: var(--blood);
+  cursor: pointer;
+}
+.lair-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--blood-soft);
+  font-size: var(--fs-s);
+}
+.lair-confirm span {
+  flex: 1 1 100%;
+}
+
+/* Watch status (top right) */
+.lair-watch {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s1) var(--s3);
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: var(--blood);
+  cursor: pointer;
+  font: inherit;
+}
+.lair-watch:hover,
+.lair-watch:focus-visible {
+  border-color: var(--blood-soft);
+}
+.lair-watch > span {
+  display: grid;
+}
+.lair-watch b {
+  font-size: var(--fs-l);
+  color: var(--blood);
+}
+.lair-watch i {
+  font-style: normal;
+  font-size: var(--fs-s);
+  color: var(--ash);
+}
+.lair-watch__lvl {
+  grid-column: 1 / -1;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--blood-faint);
+}
+.lair-watch__lvl b {
+  color: var(--bone);
+}
+.lair-watch.tone-warn .lair-watch__lvl b {
+  color: var(--sev-medium);
+}
+.lair-watch.tone-high .lair-watch__lvl b,
+.lair-watch.tone-bad .lair-watch__lvl b {
+  color: var(--blood);
+}
+
+/* Quick access */
+.lair-quick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.lair-quick button {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 7px var(--s1);
+  border: 0;
+  background: none;
+  color: var(--bone);
+  font: inherit;
+  font-size: var(--fs-m);
+  cursor: pointer;
+  text-align: left;
+}
+.lair-quick svg {
+  color: var(--blood);
+  flex: none;
+}
+.lair-quick button:hover,
+.lair-quick button:focus-visible {
+  background: var(--blood-faint);
+  color: #fff;
+}
+
+/* Media */
+.lair-media {
+  display: grid;
+  gap: 2px;
+}
+.lair-media > b {
+  font-size: var(--fs-l);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lair-media > span {
+  color: var(--ash);
+  font-size: var(--fs-s);
+}
+.lair-media__bar {
+  position: relative;
+  height: 3px;
+  margin: var(--s3) 0 var(--s4);
+  background: rgba(255, 42, 61, 0.15);
+}
+.lair-media__bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--blood);
+  box-shadow: 0 0 6px var(--blood-soft);
+}
+.lair-media__bar small {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  font-family: var(--font-data);
+  font-size: var(--fs-xs);
+  color: var(--ash);
+}
+.lair-media__ctl {
+  display: flex;
+  justify-content: center;
+  gap: var(--s4);
+}
+.lair-media__ctl button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--blood-faint);
+  background: none;
+  color: var(--blood);
+  font-size: 15px;
+  cursor: pointer;
+}
+.lair-media__ctl button.is-main {
+  border-color: var(--blood-soft);
+}
+.lair-media__ctl button:hover,
+.lair-media__ctl button:focus-visible {
+  background: var(--blood-faint);
+}
+
+/* Stage */
+.lair-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.ayla-holo--stage {
+  position: absolute;
+  inset: 0 0 92px;
+  width: 100%;
+  height: calc(100% - 92px);
+}
+.lair-sub {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 112px;
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-l);
+  line-height: 1.45;
+  color: var(--bone);
+  text-shadow: 0 0 8px #000, 0 0 2px #000;
+}
+.lair-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: var(--s2);
+  justify-items: center;
+}
+.lair-launch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s1);
+}
+.lair-launch button {
+  padding: 4px var(--s3);
+  border: 1px solid var(--blood-faint);
+  background: rgba(20, 2, 5, 0.7);
+  color: var(--ash);
+  font: inherit;
+  font-size: var(--fs-s);
+  cursor: pointer;
+}
+.lair-launch button:hover,
+.lair-launch button:focus-visible {
+  color: var(--bone);
+  border-color: var(--blood-soft);
+}
+.lair-input {
+  display: flex;
+  gap: var(--s2);
+  width: min(620px, 100%);
+}
+.lair-input .field {
+  flex: 1;
+  background: rgba(20, 2, 5, 0.85);
+  border-color: var(--blood-soft);
+  color: var(--bone);
+}
+.lair-input .field:focus {
+  border-color: var(--blood);
+}
+.lair-mic {
+  min-width: 84px;
+  border: 1px solid var(--blood);
+  background: rgba(255, 42, 61, 0.12);
+  color: var(--blood);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lair-mic:hover,
+.lair-mic:focus-visible {
+  background: rgba(255, 42, 61, 0.24);
+}
+.lair-mic.is-on {
+  background: var(--blood);
+  color: var(--pit);
+}
+
+@media (max-width: 1100px) {
+  .lair {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    overflow-y: auto;
+  }
+  .lair > .lair-col:last-child {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}

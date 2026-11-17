@@ -4,6 +4,7 @@
 
 pub mod apps;
 pub mod brain;
+pub mod media;
 pub mod speech;
 pub mod weather;
 pub mod whisper;
