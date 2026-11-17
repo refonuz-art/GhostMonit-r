@@ -185,7 +185,13 @@ Güvenlik denetimi düzeltmeleri: reveal yolunu tırnaklı `raw_arg`, export_rep
 Testler: 73 Rust (+1 ignored canlı Defender), 19 vitest. Canlı doğrulanan: DNS, ARP komşuları, Defender betiği, olay günlüğü (Security standart kullanıcıda erişim reddi beklendiği gibi), tarayıcı uzantıları.
 Doğrulanmayanlar: uygulamanın 0.3.0 olarak gerçekten açılıp Sağlık ekranının görüntüsü (eski yönetici örneği PID 42236 çalıştığı için yeni sürüm başlatılamadı/kurulamadı), güvenlik duvarı kuralının UAC ile eklenmesi, Telegram/Discord gerçek gönderim, fidye alarmının gerçek tetiklenmesi.
 
-## YARIN YAPILACAK (kullanıcı istedi, 2026-11-17): Sesli yapay zekâ asistanı
-- Resident Evil'deki konuşan yapay zekâdan esinlenen ama ÖZGÜN bir karakter (isim/ses/görsel bize ait).
-- Kullanıcıyla sesli konuşacak, şüpheli durumlarda güzel, doğal Türkçe ile uyaracak ("Şüpheli bir durum tespit ettim…").
-- Bu konuyu kullanıcıya oturum başında HATIRLAT.
+## 0.4.0 — sesli asistan (2026-11-17, TASLAK sürüm)
+Kullanıcı Resident Evil'deki hologram yapay zekâ gibi bir asistan istedi → özgün karakter: varsayılan ad **Ayla** (ayardan değişir), nokta bulutu hologram (resim yok, prosedürel), renk uygulamanın arc/phosphor/önem renkleri.
+- Ön yüz `src/assistant/`: `Hologram.tsx` (canvas, ~4.5k nokta: baş/yüz kabartması, saç telleri, boyun/omuz; göz kırpma, bakış, nefes, ses seviyesine göre dudak, uyarıda renk + glitch, tarama bandı), `voice.ts` (kuyruk; Windows sesi = speechSynthesis Tolga, Azure = backend mp3 + WebAudio analyser), `mic.ts` (16 kHz WAV, sessizlikte otomatik bitiş, bas-konuş), `intents.ts` (+test, anahtarsız Türkçe komutlar), `agent.ts` (eylemler, onay akışı, Claude araç döngüsü), `Assistant.tsx` (köşe figürü + panel, uyarıları 1,5 sn toplayıp sesli okur), `store.ts`.
+- Arka uç `src-tauri/src/assistant/`: `apps.rs` (Başlat menüsü/masaüstü .lnk/.url dizini + Türkçe ek toleranslı eşleştirme, yalnızca dizindeki hedef başlatılır, https dışı URL reddi), `weather.rs` (Open-Meteo, anahtarsız), `speech.rs` (Azure TTS/STT, anahtar+bölge DPAPI), `brain.rs` (Claude: raw HTTP çünkü Rust SDK yok; model `claude-opus-5-5`, effort low, `fallbacks: default` + beta `server-side-fallback-2026-07-01`, `anthropic-version: 2026-10-21`; webview yalnızca system/messages/tools verir). IPC `commands_assistant.rs`. Ayarlar `assistant_*` alanları.
+- Ayarlar → "Asistan" bölümü; Ctrl+Boşluk konuş; GhostLine'da tanınmayan cümle asistana gider; Sağlık sekmesine derin bağlantı (`healthTab`).
+- Güvenlik: engelle/dondur/kapat her zaman "evet" ister; kritik işlem sesle kapatılmaz; sürekli dinleme yok.
+- Doğrulanan: 85 Rust testi (+canlı hava durumu), 24 vitest, tsc temiz, hologram Edge'de önizleme ekran görüntüsüyle görüldü (yüz/saç/omuz okunuyor, uyarı turuncusu çalışıyor).
+- DOĞRULANMAYAN: uygulama içinde çalışma (eski yönetici örneği PID 42236 yüzünden kurulamadı), WebView2 mikrofon izni, Windows sesinin WebView2'de Tolga'yı bulması, Azure/Claude gerçek çağrı (anahtar yok).
+- GitHub'da v0.4.0 **taslak** olarak duruyor (otomatik güncellemeye düşmez). Kullanıcı test edince yayımla: `gh release edit v0.4.0 --draft=false -R refonuz-art/GhostMonit-r`.
+- Fikir listesi: uyanma kelimesi ("Ayla") ile sürekli dinleme, çevrimdışı Türkçe tanıma (whisper.cpp), Piper ile çevrimdışı doğal ses (Türkçe kadın sesi yok, yalnızca erkek).
