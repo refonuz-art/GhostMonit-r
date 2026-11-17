@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../../ipc/api";
 import { guard } from "../../ipc/guard";
-import { assistantApi, type AssistantStatus } from "../../ipc/assistant";
+import { assistantApi, type AssistantStatus, type InstallProgress } from "../../ipc/assistant";
 import * as voice from "../../assistant/voice";
 import { intel } from "../../ipc/intel";
 import { settingsApi, type AppSettings, type UpdateInfo } from "../../ipc/settings";
@@ -158,6 +158,46 @@ function AssistantKeys({ status, onChange }: { status: AssistantStatus | null; o
         </form>
       )}
     </div>
+  );
+}
+
+/** One-time download of the offline Turkish recogniser, with progress. */
+function SttInstall({ status, onChange }: { status: AssistantStatus | null; onChange: (s: AssistantStatus) => void }) {
+  const notify = useGhost((s) => s.notify);
+  const [prog, setProg] = useState<InstallProgress | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const u = on<InstallProgress>("assistant-install", setProg);
+    return () => {
+      u.then((f) => f());
+    };
+  }, []);
+  if (status?.localStt) return <span className="st-ok">kurulu</span>;
+  const pct = prog && prog.total ? Math.round((prog.done / prog.total) * 100) : null;
+  return (
+    <button
+      className="btn"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          onChange(await assistantApi.installStt());
+          window.dispatchEvent(new Event("gm-assistant-keys"));
+          notify("Konuşma tanıma kuruldu; Ctrl+Boşluk ile konuşabilirsiniz");
+        } catch (e) {
+          notify(String(e), "bad");
+        } finally {
+          setBusy(false);
+          setProg(null);
+        }
+      }}
+    >
+      {!busy
+        ? "Konuşma tanımayı kur (≈580 MB)"
+        : prog?.stage === "model"
+          ? `Model indiriliyor… ${pct ?? 0}%`
+          : "Program indiriliyor…"}
+    </button>
   );
 }
 
@@ -595,8 +635,14 @@ export default function Settings() {
             <CityField value={s.assistantCity} onSave={(v) => save({ assistantCity: v })} />
           </Row>
           <Row
-            title="Sesli komut ve doğal ses"
-            hint="Türkçe konuşmayı tanımak ve doğal ses için Azure Speech kullanılır (portal.azure.com → Speech hizmeti; ücretsiz katman ayda 5 saat tanıma ve 500 bin karakter ses içerir). Anahtar yoksa asistan yazılı komutlarla ve Windows sesiyle çalışır."
+            title="Konuşma tanıma (internetsiz)"
+            hint="Sesli komutlar bilgisayarınızda Whisper modeliyle yazıya çevrilir; ses hiçbir yere gönderilmez. Bir kez indirilir, imzası doğrulanır."
+          >
+            <SttInstall status={asst} onChange={setAsst} />
+          </Row>
+          <Row
+            title="Azure Speech (isteğe bağlı)"
+            hint="Doğal kadın sesi (Emel) için Azure Speech kullanılır (portal.azure.com → Speech hizmeti; ücretsiz katman ayda 5 saat tanıma ve 500 bin karakter ses içerir). Anahtar yoksa asistan yazılı komutlarla ve Windows sesiyle çalışır."
             note="Konuşma yalnızca Konuş düğmesine ya da Ctrl+Boşluk'a bastığınızda kaydedilir; sürekli dinleme yoktur."
           >
             <AssistantKeys status={asst} onChange={setAsst} />

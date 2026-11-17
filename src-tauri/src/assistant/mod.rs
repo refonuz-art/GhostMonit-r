@@ -6,6 +6,7 @@ pub mod apps;
 pub mod brain;
 pub mod speech;
 pub mod weather;
+pub mod whisper;
 
 use serde::Serialize;
 
@@ -42,11 +43,13 @@ pub struct AssistantStatus {
     /// The region is not secret; shown so the user can see what is configured.
     pub azure_region: Option<String>,
     pub claude: bool,
+    /// Offline whisper.cpp recognition is installed.
+    pub local_stt: bool,
 }
 
 pub fn status(shared: &Shared) -> AssistantStatus {
     let region = secret(shared, AZURE_REGION);
-    AssistantStatus { azure: secret(shared, AZURE_KEY).is_some() && region.is_some(), azure_region: region, claude: secret(shared, CLAUDE_KEY).is_some() }
+    AssistantStatus { azure: secret(shared, AZURE_KEY).is_some() && region.is_some(), azure_region: region, claude: secret(shared, CLAUDE_KEY).is_some(), local_stt: whisper::installed(shared) }
 }
 
 pub fn set_azure(shared: &Shared, key: Option<String>, region: Option<String>) -> Result<(), String> {

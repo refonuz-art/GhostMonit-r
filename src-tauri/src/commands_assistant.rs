@@ -6,7 +6,7 @@ use serde_json::Value;
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::State;
 
-use crate::assistant::{self, apps, brain, speech, weather};
+use crate::assistant::{self, apps, brain, speech, weather, whisper};
 use crate::state::Shared;
 
 type S<'a> = State<'a, Arc<Shared>>;
@@ -51,7 +51,26 @@ pub async fn assistant_stt(s: State<'_, Arc<Shared>>, request: Request<'_>) -> R
     let InvokeBody::Raw(wav) = request.body() else { return Err("Ses kaydı bekleniyordu".into()) };
     let wav = wav.clone();
     let shared = s.inner().clone();
-    blocking(move || speech::recognize(&shared, &wav)).await
+    // Azure when configured, otherwise the offline recogniser.
+    blocking(move || {
+        if assistant::status(&shared).azure {
+            speech::recognize(&shared, &wav)
+        } else {
+            whisper::transcribe(&shared, &wav)
+        }
+    })
+    .await
+}
+
+/// Download and verify the offline recogniser (progress on `gm://assistant-install`).
+#[tauri::command]
+pub async fn assistant_install_stt(app: tauri::AppHandle, s: State<'_, Arc<Shared>>) -> R<assistant::AssistantStatus> {
+    let shared = s.inner().clone();
+    blocking(move || {
+        whisper::install(&app, &shared)?;
+        Ok(assistant::status(&shared))
+    })
+    .await
 }
 
 #[tauri::command]

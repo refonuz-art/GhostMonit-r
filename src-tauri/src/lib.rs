@@ -158,6 +158,7 @@ pub fn run() {
             commands_assistant::assistant_open_url,
             commands_assistant::assistant_weather,
             commands_assistant::assistant_ask,
+            commands_assistant::assistant_install_stt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ghost Monitor");

@@ -4,6 +4,12 @@ export interface AssistantStatus {
   azure: boolean;
   azureRegion: string | null;
   claude: boolean;
+  localStt: boolean;
+}
+export interface InstallProgress {
+  stage: "program" | "model" | "done";
+  done: number;
+  total: number;
 }
 export interface AppEntry {
   name: string;
@@ -51,6 +57,7 @@ export const assistantApi = {
   launch: (target: string) => invoke<string>("assistant_launch", { target }),
   openUrl: (url: string) => invoke<void>("assistant_open_url", { url }),
   weather: (city?: string | null) => invoke<Weather>("assistant_weather", { city: city ?? null }),
+  installStt: () => invoke<AssistantStatus>("assistant_install_stt"),
   ask: (system: unknown, messages: ClaudeMessage[], tools: unknown[]) =>
     invoke<ClaudeResponse>("assistant_ask", { system, messages, tools }),
 };

@@ -47,14 +47,15 @@ export function Assistant() {
     settingsApi.get().then(setCfg, () => {});
     assistantApi.status().then(setSt, () => {});
     const onSave = (e: Event) => {
-      setCfg((e as CustomEvent<AppSettings>).detail);
-      assistantApi.status().then(setSt, () => {});
+      const saved = (e as CustomEvent<AppSettings | undefined>).detail;
+      if (saved) setCfg(saved);
     };
+    const onKeys = () => assistantApi.status().then(setSt, () => {});
     window.addEventListener("gm-settings", onSave);
-    window.addEventListener("gm-assistant-keys", onSave);
+    window.addEventListener("gm-assistant-keys", onKeys);
     return () => {
       window.removeEventListener("gm-settings", onSave);
-      window.removeEventListener("gm-assistant-keys", onSave);
+      window.removeEventListener("gm-assistant-keys", onKeys);
     };
   }, []);
 
@@ -131,9 +132,9 @@ export function Assistant() {
       return;
     }
     s.setOpen(true);
-    if (!st?.azure) {
+    if (!st?.azure && !st?.localStt) {
       const msg =
-        "Sesli komut için Azure Speech anahtarı gerekiyor; Ayarlar'daki Asistan bölümünden ekleyebilirsiniz. Şimdilik yazarak konuşabiliriz.";
+        "Sesli komut için konuşma tanımayı kurmam gerekiyor. Ayarlar'daki Asistan bölümünden “Konuşma tanımayı kur” düğmesine basın; internetsiz çalışır. Şimdilik yazarak konuşabiliriz.";
       s.add("ayla", msg);
       void voice.say(msg);
       return;
@@ -294,7 +295,7 @@ export function Assistant() {
           type="button"
           className={`ayla-mic${mode === "listening" ? " is-on" : ""}`}
           onClick={listen}
-          title={st?.azure ? "Konuşmak için basın (Ctrl+Boşluk)" : "Sesli komut için Azure Speech anahtarı gerekir"}
+          title={st?.azure || st?.localStt ? "Konuşmak için basın (Ctrl+Boşluk)" : "Sesli komut için önce Ayarlar → Asistan’dan konuşma tanımayı kurun"}
         >
           {mode === "listening" ? "Bitir" : "Konuş"}
         </button>
