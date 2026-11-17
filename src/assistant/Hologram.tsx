@@ -1,12 +1,16 @@
-// The assistant's body: a point-cloud bust projected above an emitter disc.
-// Built procedurally (no image assets): an ellipsoid head shaped into a face, long hair
-// strands that sway, neck and shoulders that breathe. Lips follow the voice loudness,
-// eyes blink and drift, and the whole figure re-tints and glitches when an alert comes in.
+// The assistant's body: a crimson point-cloud bust projected above an emitter disc.
+// Built procedurally (no image assets): a gaunt face with slit-pupil eyes that burn white,
+// light that drips from the eyes, embers rising off the body, long swaying hair. She stares
+// at the viewer, twitches now and then, glitches with a colour split, and flares on alerts.
 import { useEffect, useRef } from "react";
 import type { Severity } from "../ipc/types";
 import type { Mode } from "./store";
 
-type Kind = "skin" | "hair" | "strand" | "body" | "eye" | "iris" | "brow" | "nose" | "lipU" | "lipL" | "seam";
+type Kind =
+  | "skin" | "hair" | "strand" | "body" | "eye" | "iris" | "slit" | "brow" | "nose"
+  | "lipU" | "lipL" | "seam" | "drip" | "ember";
+
+const GLOW = new Set<Kind>(["iris", "slit"]);
 
 interface Geo {
   x: Float32Array;
@@ -20,18 +24,21 @@ interface Geo {
 }
 
 const A = 0.72, B = 0.95, C = 0.82;
-const taperX = (dy: number) => (dy < 0 ? 1 - 0.36 * Math.pow(-dy, 1.6) : 1 - 0.06 * dy * dy);
+const taperX = (dy: number) => (dy < 0 ? 1 - 0.42 * Math.pow(-dy, 1.5) : 1 - 0.06 * dy * dy);
 const taperZ = (dy: number) => (dy < 0 ? 1 - 0.18 * -dy : 1);
 const g2 = (x: number, y: number, sx: number, sy: number) => Math.exp(-((x / sx) ** 2 + (y / sy) ** 2));
 
-/** Front-face relief: nose, eye sockets, lips, chin. */
+/** Front-face relief: sharp nose, deep sockets, high cheekbones over hollow cheeks, pointed chin. */
 function relief(x: number, y: number) {
+  const ax = Math.abs(x);
   return (
-    0.15 * g2(x, y + 0.06, 0.07, 0.17) +
-    0.05 * g2(x, y + 0.2, 0.06, 0.05) -
-    0.06 * g2(Math.abs(x) - 0.25, y - 0.1, 0.11, 0.07) +
-    0.035 * g2(x, y + 0.45, 0.17, 0.06) +
-    0.04 * g2(x, y + 0.82, 0.15, 0.08)
+    0.15 * g2(x, y + 0.06, 0.06, 0.17) +
+    0.05 * g2(x, y + 0.2, 0.05, 0.05) -
+    0.1 * g2(ax - 0.25, y - 0.1, 0.12, 0.08) +
+    0.045 * g2(ax - 0.37, y + 0.05, 0.09, 0.05) -
+    0.06 * g2(ax - 0.31, y + 0.33, 0.1, 0.13) +
+    0.03 * g2(x, y + 0.45, 0.15, 0.05) +
+    0.05 * g2(x, y + 0.85, 0.11, 0.08)
   );
 }
 
@@ -125,18 +132,28 @@ function build(): Geo {
 
   // Face features on the surface.
   for (const cx of [-0.25, 0.25]) {
+    const side = cx < 0 ? -1 : 1;
     for (let t = 0; t <= 1.0001; t += 1 / 30) {
-      const x = cx + 0.115 * (2 * t - 1) * (cx < 0 ? -1 : 1);
-      const lift = 0.012 * (2 * t - 1); // outer corner slightly higher
-      add(x, 0.1 + 0.046 * Math.sin(Math.PI * t) + lift, frontZ(x, 0.1), 1, "eye", 1, cx);
-      add(x, 0.1 - 0.028 * Math.sin(Math.PI * t) + lift, frontZ(x, 0.1), 0.75, "eye", -1, cx);
-      const bx = cx + 0.14 * (2 * t - 1) * (cx < 0 ? -1 : 1);
-      add(bx, 0.235 + 0.035 * Math.sin(Math.PI * (t * 0.85 + 0.1)) - 0.01 * t, frontZ(bx, 0.24), 0.8, "brow");
+      // Narrow almond, outer corner swept up.
+      const x = cx + 0.12 * (2 * t - 1) * side;
+      const lift = 0.03 * (2 * t - 1);
+      add(x, 0.1 + 0.03 * Math.sin(Math.PI * t) + lift, frontZ(x, 0.1), 1.4, "eye", 1, cx);
+      add(x, 0.1 - 0.02 * Math.sin(Math.PI * t) + lift * 0.6, frontZ(x, 0.1), 0.8, "eye", -1, cx);
+      // Brows pulled down toward the nose.
+      const bx = cx + 0.15 * (2 * t - 1) * side;
+      add(bx, 0.18 + 0.09 * t + 0.015 * Math.sin(Math.PI * t), frontZ(bx, 0.22), 0.9, "brow");
     }
     for (let a = 0; a < Math.PI * 2; a += Math.PI / 9) {
-      add(cx + Math.cos(a) * 0.03, 0.105 + Math.sin(a) * 0.03, frontZ(cx, 0.1) + 0.01, 1, "iris", 0, cx);
+      add(cx + Math.cos(a) * 0.026, 0.1 + Math.sin(a) * 0.026, frontZ(cx, 0.1) + 0.01, 0.9, "iris", 0, cx);
     }
+    // Vertical slit pupil.
+    for (let t = -1; t <= 1.0001; t += 1 / 4) add(cx, 0.1 + t * 0.024, frontZ(cx, 0.1) + 0.012, 1, "slit", 0, cx);
+    // Light running down from the lower lid: three trails per eye (p = index along trail, q = phase).
+    for (const [dx, ph] of [[-0.05, 0.1], [0.004, 0.55], [0.045, 0.32]] as const)
+      for (let j = 0; j < 16; j++) add(cx + dx * side, 0, 0, 1, "drip", j, ph + (cx < 0 ? 0 : 0.21));
   }
+  // Embers rising off the shoulders and hair ends (p = phase, q = sway seed).
+  for (let i = 0; i < 260; i++) add((rnd() * 2 - 1) * 1.15, 0, (rnd() - 0.3) * 0.5, 1, "ember", rnd(), rnd() * 6.28);
   for (let t = 0; t <= 1.0001; t += 1 / 10) add(0, 0.06 - t * 0.24, frontZ(0, 0.06 - t * 0.24), 0.55, "nose");
   for (const s of [-1, 1])
     for (let t = 0; t <= 1.0001; t += 1 / 6) {
@@ -145,8 +162,8 @@ function build(): Geo {
     }
   for (let t = -1; t <= 1.0001; t += 1 / 18) {
     const x = t * 0.16;
-    add(x, 0, frontZ(x, -0.43), 0.95, "lipU", t);
-    add(x, 0, frontZ(x, -0.47), 0.85, "lipL", t);
+    add(x, 0, frontZ(x, -0.43), 0.6, "lipU", t);
+    add(x, 0, frontZ(x, -0.47), 0.5, "lipL", t);
     add(x, 0, frontZ(x, -0.45), 0.6, "seam", t);
   }
 
@@ -164,13 +181,13 @@ function build(): Geo {
 let GEO: Geo | null = null;
 
 const TINT: Record<string, [number, number, number]> = {
-  idle: [34, 184, 255],
-  thinking: [90, 205, 255],
-  speaking: [130, 220, 255],
-  listening: [61, 255, 154],
-  MEDIUM: [255, 181, 71],
-  HIGH: [255, 122, 61],
-  CRITICAL: [255, 61, 78],
+  idle: [230, 22, 44],
+  thinking: [255, 40, 110],
+  speaking: [255, 52, 60],
+  listening: [255, 110, 30],
+  MEDIUM: [255, 150, 40],
+  HIGH: [255, 70, 20],
+  CRITICAL: [255, 225, 220],
 };
 
 export function Hologram({
@@ -199,6 +216,9 @@ export function Hologram({
     let gaze = { x: 0, y: 0, tx: 0, ty: 0, next: 0 };
     let glitch = { until: 0, y0: 0, h: 0, dx: 0 };
     let lastAlert: Severity | null = null;
+    // Sudden head twitch every few seconds.
+    let twitch = { at: performance.now() + 4000, until: 0, roll: 0, yaw: 0 };
+    let tr = 0, ty = 0;
     const tint = [...TINT.idle];
     const sx = new Float32Array(g.n), sy = new Float32Array(g.n), sa = new Float32Array(g.n);
 
@@ -246,10 +266,20 @@ export function Hologram({
       gaze.x += (gaze.tx - gaze.x) * 0.25;
       gaze.y += (gaze.ty - gaze.y) * 0.25;
 
-      const bodyYaw = 0.1 * Math.sin(t * 0.21);
-      const headYaw = bodyYaw + (md === "listening" ? 0 : 0.2 * Math.sin(t * 0.33 + 1));
-      const headPitch = 0.05 * Math.sin(t * 0.5) + mouth * 0.03 + (md === "thinking" ? -0.06 : 0);
-      const headRoll = 0.03 * Math.sin(t * 0.27 + 2);
+      if (!reduced && now > twitch.at) {
+        const s = Math.random() < 0.5 ? -1 : 1;
+        twitch = { at: now + 4000 + Math.random() * 7000, until: now + 500 + Math.random() * 900, roll: s * (0.1 + Math.random() * 0.1), yaw: -s * Math.random() * 0.12 };
+        glitch = { until: now + 140, y0: 0, h: 0, dx: 0 };
+      }
+      const twitching = now < twitch.until;
+      tr += ((twitching ? twitch.roll : 0) - tr) * (twitching ? 0.75 : 0.06);
+      ty += ((twitching ? twitch.yaw : 0) - ty) * (twitching ? 0.75 : 0.06);
+
+      // She mostly stares straight out, head slightly tilted.
+      const bodyYaw = 0.05 * Math.sin(t * 0.21);
+      const headYaw = bodyYaw + ty + (md === "listening" ? 0 : 0.07 * Math.sin(t * 0.33 + 1));
+      const headPitch = 0.05 + 0.03 * Math.sin(t * 0.5) + mouth * 0.03 + (md === "thinking" ? -0.06 : 0);
+      const headRoll = 0.07 + 0.02 * Math.sin(t * 0.27 + 2) + tr;
       const breathe = Math.sin(t * 1.3);
 
       const D = 5.5;
@@ -269,26 +299,42 @@ export function Hologram({
         if (k === "body") {
           head = false;
           y += 0.012 * breathe * (y < -1.3 ? 1 : 0.4);
+        } else if (k === "ember") {
+          head = false;
+          const f = (t * 0.07 + g.p[i]) % 1;
+          y = -2.3 + f * 2.9;
+          x = g.x[i] * (1 - f * 0.4) + 0.07 * Math.sin(t * 0.8 + g.q[i] + f * 6);
+          bright = 0.5 * Math.sin(Math.PI * f) * (0.6 + 0.4 * Math.sin(t * 5 + g.q[i]));
+        } else if (k === "drip") {
+          const f = ((t * 0.09 + g.q[i]) % 1) - g.p[i] * 0.013;
+          if (f < 0) {
+            bright = 0;
+          } else {
+            y = 0.075 - f * 0.62;
+            x = g.x[i] + 0.006 * Math.sin(f * 11 + g.q[i] * 9);
+            z = frontZ(x, y) + 0.012;
+            bright = 0.95 * (1 - g.p[i] / 16) * Math.pow(1 - f, 1.4);
+          }
         } else if (k === "strand") {
           const st = g.p[i];
           x += 0.05 * Math.sin(t * 0.9 + g.q[i] + st * 2.2) * st;
           z += 0.03 * Math.cos(t * 0.7 + g.q[i]) * st;
         } else if (k === "lipU") {
           const u = g.p[i];
-          y = -0.428 - 0.018 * u * u + 0.006 * Math.exp(-((u / 0.18) ** 2)) + mouth * 0.018 * (1 - u * u);
+          y = -0.428 + 0.004 * u * u + 0.006 * Math.exp(-((u / 0.18) ** 2)) + mouth * 0.018 * (1 - u * u);
         } else if (k === "lipL") {
           const u = g.p[i];
-          y = -0.47 - 0.025 * (1 - u * u) - mouth * 0.085 * (1 - u * u);
+          y = -0.465 + 0.005 * u * u - 0.022 * (1 - u * u) - mouth * 0.09 * (1 - u * u);
         } else if (k === "seam") {
           const u = g.p[i];
-          y = -0.452 - mouth * 0.035 * (1 - u * u);
+          y = -0.452 + 0.012 * u * u - mouth * 0.035 * (1 - u * u);
           bright = 0.6 - mouth * 0.5;
         } else if (k === "eye") {
           const cyEye = 0.1;
           y = cyEye + (y - cyEye) * blink;
-        } else if (k === "iris") {
+        } else if (k === "iris" || k === "slit") {
           x += gaze.x;
-          y = 0.105 + (y - 0.105) * blink + gaze.y;
+          y = 0.1 + (y - 0.1) * blink + gaze.y;
           bright = blink < 0.4 ? 0 : 1;
         }
         // Strands follow the head near the scalp and the body further down.
@@ -349,36 +395,49 @@ export function Hologram({
       // Glitch: a horizontal slice jumps sideways (always on alerts, rarely otherwise).
       if (!reduced && now < glitch.until) {
         if (Math.random() < 0.35) glitch = { ...glitch, y0: Math.random() * Hh, h: Hh * (0.03 + Math.random() * 0.08), dx: (Math.random() - 0.5) * W * 0.08 };
-      } else if (!reduced && Math.random() < 0.002) {
+      } else if (!reduced && Math.random() < 0.006) {
         glitch = { until: now + 120, y0: Math.random() * Hh, h: Hh * 0.05, dx: (Math.random() - 0.5) * W * 0.05 };
       }
-      const flicker = reduced ? 1 : 0.9 + 0.1 * Math.sin(t * 37) * Math.sin(t * 13);
+      const flicker = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 37) * Math.sin(t * 13);
 
       ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = `rgb(${rgb})`;
       const size = Math.max(1, W / 240);
-      for (let i = 0; i < g.n; i++) {
-        const a = sa[i] * flicker;
-        if (a < 0.03) continue;
-        let px = sx[i];
-        if (now < glitch.until && sy[i] > glitch.y0 && sy[i] < glitch.y0 + glitch.h) px += glitch.dx;
-        const k = g.k[i];
-        const s = k === "iris" ? size * 1.6 : k === "eye" || k === "lipU" || k === "lipL" ? size * 1.25 : size;
-        ctx.globalAlpha = a;
-        ctx.fillRect(px - s / 2, sy[i] - s / 2, s, s);
-      }
+      const glitching = now < glitch.until;
+      const split = glitching ? size * 3 : size * 1.2;
+      const pass = (style: string, dx: number, alpha: number, glowOnly: boolean) => {
+        ctx.fillStyle = style;
+        for (let i = 0; i < g.n; i++) {
+          const k = g.k[i];
+          if (GLOW.has(k) !== glowOnly) continue;
+          const a = sa[i] * flicker * alpha;
+          if (a < 0.03) continue;
+          let px = sx[i] + dx;
+          if (glitching && sy[i] > glitch.y0 && sy[i] < glitch.y0 + glitch.h) px += glitch.dx;
+          const s = k === "iris" || k === "slit" ? size * 1.5 : k === "eye" || k === "lipU" || k === "lipL" || k === "drip" ? size * 1.25 : size;
+          ctx.globalAlpha = Math.min(1, a);
+          ctx.fillRect(px - s / 2, sy[i] - s / 2, s, s);
+        }
+      };
+      // Colour split: a faint cold ghost offset from the body, stronger while glitching.
+      pass("rgb(40,170,255)", split, glitching ? 0.4 : 0.14, false);
+      pass(`rgb(${rgb})`, 0, 1, false);
+      // Eyes burn near-white over the red.
+      pass("rgb(255,236,228)", 0, 1, true);
       ctx.globalAlpha = 1;
 
-      // Glowing irises (one glow per eye).
+      // Eye glow (one per eye), brighter on alerts and while speaking.
+      const flare = (al === "CRITICAL" || al === "HIGH" ? 1.8 : 1) * (0.8 + mouth * 0.8);
       const lit = new Set<number>();
       for (let i = 0; i < g.n; i++) {
-        if (g.k[i] !== "iris" || sa[i] < 0.5 || lit.has(g.q[i])) continue;
+        if (g.k[i] !== "slit" || sa[i] < 0.5 || lit.has(g.q[i])) continue;
         lit.add(g.q[i]);
-        const gr = ctx.createRadialGradient(sx[i], sy[i], 0, sx[i], sy[i], size * 6);
-        gr.addColorStop(0, `rgba(${rgb},0.12)`);
+        const R = size * 11;
+        const gr = ctx.createRadialGradient(sx[i], sy[i], 0, sx[i], sy[i], R);
+        gr.addColorStop(0, `rgba(255,90,80,${Math.min(0.6, 0.32 * flare * flicker)})`);
+        gr.addColorStop(0.35, `rgba(${rgb},${Math.min(0.3, 0.12 * flare)})`);
         gr.addColorStop(1, `rgba(${rgb},0)`);
         ctx.fillStyle = gr;
-        ctx.fillRect(sx[i] - size * 6, sy[i] - size * 6, size * 12, size * 12);
+        ctx.fillRect(sx[i] - R, sy[i] - R, R * 2, R * 2);
       }
       ctx.globalCompositeOperation = "source-over";
 

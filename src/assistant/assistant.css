@@ -2,12 +2,12 @@
 
 .ayla-dock,
 .ayla-panel {
-  --ayla: var(--arc);
-  --ayla-glow: var(--arc-glow);
+  --ayla: #ff2e45;
+  --ayla-glow: rgba(230, 22, 44, 0.2);
 }
 .is-listening {
-  --ayla: var(--phosphor);
-  --ayla-glow: var(--phosphor-glow);
+  --ayla: #ff7a2e;
+  --ayla-glow: rgba(255, 110, 30, 0.2);
 }
 .is-medium {
   --ayla: var(--sev-medium);
