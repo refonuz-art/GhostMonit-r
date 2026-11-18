@@ -85,8 +85,10 @@ fn write(shared: &Shared, recs: &[Rec]) {
         shared.processes.read().iter().map(|p| (p.pid, (p.name.clone(), p.exe.clone()))).collect();
     let st = shared.store.lock();
     let Ok(tx) = st.conn.unchecked_transaction() else { return };
+    let mut checks = Vec::with_capacity(recs.len());
     for r in recs {
         let (process, exe) = r.pid.and_then(|p| procs.get(&p).cloned()).map(|(n, e)| (Some(n), e)).unwrap_or((None, None));
+        checks.push((r.name.clone(), r.status, r.pid, process.clone(), exe.clone()));
         let _ = st.conn.execute(
             "INSERT INTO dns_log (ts, name, qtype, status, pid, process, exe, results, source) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
             params![r.ts, r.name, r.qtype, r.status, r.pid, process, exe, r.results, r.source],
@@ -95,6 +97,9 @@ fn write(shared: &Shared, recs: &[Rec]) {
     let _ = tx.commit();
     drop(st);
     shared.dns.write().logged += recs.len() as u64;
+    for (name, status, pid, process, exe) in &checks {
+        super::dnsrisk::check(shared, &super::dnsrisk::Query { name, status: *status, pid: *pid, process: process.as_deref(), exe: exe.as_deref() });
+    }
 }
 
 // ------------------------------------------------------------------ ETW (elevated)

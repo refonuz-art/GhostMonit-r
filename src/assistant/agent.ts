@@ -4,7 +4,9 @@
 import { api } from "../ipc/api";
 import { assistantApi, type ClaudeBlock, type ClaudeMessage } from "../ipc/assistant";
 import { guard } from "../ipc/guard";
-import type { ProcessInfo, Severity } from "../ipc/types";
+import type { Finding, ProcessInfo, Severity } from "../ipc/types";
+import { v5, type IncidentContext } from "../ipc/v5";
+import { explainSignals, verdictAdvice } from "../state/explain";
 import { useGhost, type ModuleId } from "../state/store";
 import { parse, MODULE_WORDS, type Intent } from "./intents";
 import { useAyla } from "./store";
@@ -178,9 +180,120 @@ function killAction(target: string): string {
   });
 }
 
+
+// ---------------------------------------------------------------- findings by voice
+
+/** The finding on the Threat screen, else the most serious open one. */
+function focusFinding(): Finding | null {
+  const open = useGhost.getState().findings.filter((f) => f.status !== "dismissed" && f.severity !== "INFO");
+  const key = useAyla.getState().focus;
+  return (
+    open.find((f) => f.key === key) ??
+    [...open].sort((a, b) => SEV_RANK[b.severity] - SEV_RANK[a.severity] || b.score - a.score)[0] ??
+    null
+  );
+}
+
+export function explainFinding(f: Finding | null = focusFinding()): string {
+  if (!f) return "Şu an açık bir bulgu yok; anlatacak bir şey görmüyorum.";
+  const ex = explainSignals(f.signals).slice(0, 2);
+  let s = `${f.title}. Seviyesi ${SEV_TR[f.severity]}.`;
+  if (ex.length) s += " " + ex.map((e) => e.why).join(" ");
+  else if (f.signals.length) s += ` Gördüğüm işaret şu: ${f.signals[0].label}.`;
+  s += " " + verdictAdvice(f);
+  if (SEV_RANK[f.severity] >= 2) s += " İsterseniz “müdahale et” deyin, adım adım birlikte ilerleyelim.";
+  return s;
+}
+
+const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+function quarantineStep(f: Finding, ctx: IncidentContext): string | null {
+  if (!ctx.path || !ctx.fileExists || ctx.quarantined) return null;
+  if (ctx.running.some((p) => p.critical)) return null;
+  const file = ctx.path.split(/[\\/]/).pop();
+  return ask(`Son adım: ${file} dosyasını${ctx.running.length ? " kapatıp" : ""} karantinaya alayım mı? Karantinadan geri yüklenebilir.`, async () => {
+    for (const p of ctx.running) {
+      const r = await api.killProcess(p.pid, false);
+      if (!r.ok) return `İşlemi kapatamadım: ${r.message}`;
+    }
+    if (ctx.running.length) await wait(800);
+    await guard.quarantineAdd(ctx.path!, f.title);
+    return `${file} karantinaya alındı. Bu bulgu için yapılacaklar tamam.`;
+  });
+}
+
+function persistenceNote(ctx: IncidentContext): string {
+  if (!ctx.startup.length) return "";
+  const n = ctx.startup.length;
+  return ` Bu program Windows açılışında da başlatılıyor (${n} kayıt). Açılış ekranından devre dışı bırakmanızı öneririm.`;
+}
+
+export async function respondToFinding(f: Finding | null = focusFinding()): Promise<string> {
+  if (!f) return "Müdahale edilecek açık bir bulgu yok.";
+  const ctx = await v5.incident(f.key);
+  const freezable = ctx.running.filter((p) => !p.critical);
+  const canBlock = !!ctx.path && ctx.fileExists && /\.(exe|com|scr)$/i.test(ctx.path) && !ctx.blockedBy;
+  const parts: string[] = [];
+  if (freezable.length) parts.push(freezable.length === 1 ? `${freezable[0].name} işlemini dondurayım` : `${freezable.length} işlemi dondurayım`);
+  if (canBlock) parts.push("internetini keseyim");
+  if (!parts.length) {
+    const q = quarantineStep(f, ctx);
+    if (q) return `${f.title}. Şu an çalışan bir işlem yok.${persistenceNote(ctx)} ${q}`;
+    return `${f.title} için benim yapabileceğim bir adım kalmadı.${persistenceNote(ctx)} Ayrıntılar Tehdit ekranındaki müdahale panelinde.`;
+  }
+  return ask(`${f.title}. İlk adım olarak ${parts.join(" ve ")} mi? İkisi de geri alınabilir.`, async () => {
+    const done: string[] = [];
+    let froze = 0;
+    for (const p of freezable) await guard.suspend(p.pid, true).then(() => froze++, () => {});
+    if (froze) done.push(`${froze} işlem donduruldu`);
+    if (canBlock) {
+      try {
+        await guard.block("program", ctx.path!);
+        done.push("internet erişimi kesildi");
+      } catch (e) {
+        done.push(`internet kesilemedi (${String(e).replace(/^Error: /, "")})`);
+      }
+    }
+    const head = done.length ? `${done.join(", ")}.` : "Hiçbir adım uygulanamadı; yönetici izni gerekebilir.";
+    const next = quarantineStep(f, ctx);
+    return `${head}${persistenceNote(ctx)}${next ? " " + next : " Dosyayı kaldırmak için Tehdit ekranındaki müdahale panelini kullanabilirsiniz."}`;
+  });
+}
+
+/** Spoken once a day: the night in brief, the score and the weather. */
+export async function morningSummary(): Promise<string> {
+  const parts = [`${greeting()}.`];
+  const since = Date.now() - 12 * 3600_000;
+  const evs = useGhost.getState().liveEvents.filter((e) => e.ts >= since && SEV_RANK[e.severity] >= 2);
+  const open = useGhost.getState().findings.filter((f) => f.status !== "dismissed" && SEV_RANK[f.severity] >= 2);
+  parts.push(
+    evs.length
+      ? `Son on iki saatte ${evs.length} önemli olay oldu; en sonuncusu: ${evs[0].title}.`
+      : "Gece sakin geçti, önemli bir olay olmadı.",
+  );
+  if (open.length) parts.push(`${open.length} açık bulgu inceleme bekliyor.`);
+  try {
+    const w = await v5.weekly();
+    const now = w.health.now;
+    const then = w.health.then;
+    if (now != null) {
+      if (then != null && then !== now) parts.push(`Güvenlik puanınız ${now}; geçen hafta ${then} idi.`);
+      else parts.push(`Güvenlik puanınız ${now}.`);
+    }
+  } catch {
+    /* score unavailable */
+  }
+  try {
+    parts.push(await weather(null, "now"));
+  } catch {
+    /* no city set */
+  }
+  return parts.join(" ");
+}
+
 const HELP =
   "Şunları yapabilirim: program açmak, örneğin “Opera'yı aç”. Hava durumunu söylemek. Durum özeti vermek ve son uyarıları okumak. " +
-  "Ağı taramak. Bir programın internetini kesmek, dondurmak ya da kapatmak; bunları onayınızla yaparım. " +
+  "Bir bulguyu anlatmak ve “müdahale et” dediğinizde adım adım sınırlamak. Sabah özeti vermek. Ağı taramak. Bir programın internetini kesmek, dondurmak ya da kapatmak; bunları onayınızla yaparım. " +
   "Google'da veya YouTube'da arama yapmak. Ekranlar arasında geçiş yapmak, örneğin “sağlık ekranını aç”.";
 
 /** Run a parsed command; returns what to say. `null` = not a local command. */
@@ -227,6 +340,12 @@ export async function execute(i: Intent): Promise<string | null> {
       return alerts();
     case "health":
       return health();
+    case "explain":
+      return explainFinding();
+    case "respond":
+      return respondToFinding();
+    case "morning":
+      return morningSummary();
     case "lanScan": {
       const n = await guard.lanSweep();
       return `Ağ taraması bitti; ${n} cihaz yanıt verdi. Ayrıntılar Sağlık ekranının Ağ bölümünde.`;
@@ -332,6 +451,19 @@ const TOOLS = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
     strict: true,
   },
+  {
+    name: "explain_finding",
+    description: "Ekranda seçili (yoksa en ciddi) güvenlik bulgusunu sade Türkçeyle açıklar.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+    strict: true,
+  },
+  {
+    name: "respond_to_finding",
+    description:
+      "Seçili bulgu için müdahale planını başlatır: işlemi dondurmayı ve internetini kesmeyi, ardından karantinayı önerir. Her adım kullanıcıdan sesli onay ister.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+    strict: true,
+  },
   { type: "web_search_20260209", name: "web_search", max_uses: 3 },
 ];
 
@@ -381,6 +513,12 @@ async function runTool(name: string, input: Record<string, unknown>): Promise<st
     }
     case "scan_network":
       return (await execute({ kind: "lanScan" }))!;
+    case "explain_finding":
+      return explainFinding();
+    case "respond_to_finding": {
+      const reply = await respondToFinding();
+      return useAyla.getState().pending ? `Onay bekleniyor: ${reply}` : reply;
+    }
     default:
       return "Bilinmeyen araç.";
   }
@@ -420,6 +558,26 @@ async function converse(text: string): Promise<string> {
     return said || "Tamam.";
   }
   return "Bu iş beklediğimden uzun sürdü, burada duruyorum.";
+}
+
+/** Say something unprompted (buttons, morning summary). */
+export function speak(text: string) {
+  if (!text) return;
+  useAyla.getState().add("ayla", text);
+  void voice.say(text);
+}
+
+/** Start the voice incident flow for a finding (button in the incident panel). */
+export async function talkThrough(f: Finding) {
+  const ay = useAyla.getState();
+  ay.setOpen(true);
+  speak(explainFinding(f));
+  try {
+    const next = await respondToFinding(f);
+    if (useAyla.getState().pending) speak(next);
+  } catch (e) {
+    speak(`Müdahale bilgisini alamadım: ${String(e)}`);
+  }
 }
 
 export function resetConversation() {

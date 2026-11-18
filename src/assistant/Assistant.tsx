@@ -6,12 +6,14 @@ import { assistantApi, type AssistantStatus } from "../ipc/assistant";
 import { settingsApi, type AppSettings } from "../ipc/settings";
 import type { SecurityEvent, Severity } from "../ipc/types";
 import { useGhost } from "../state/store";
-import { configureAgent, handle, resetConversation } from "./agent";
+import { configureAgent, handle, morningSummary, resetConversation, speak } from "./agent";
 import { AylaFigure } from "./AylaVideo";
-import { record, type Recording } from "./mic";
+import { record, wakeLoop, wakeMatch, type Recording, type WakeLoop } from "./mic";
 import { useAyla, type Mode } from "./store";
 import * as voice from "./voice";
 import "./assistant.css";
+
+let morningDay: string | null = null;
 
 const RANK: Record<Severity, number> = { INFO: 0, LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
 
@@ -174,6 +176,74 @@ export function Assistant() {
   }, [st, ay]);
 
   useEffect(() => useAyla.setState({ talk: listen }), [listen]);
+
+  // Morning summary: once a day, the first time Ghost Monitor runs between 05:00 and 12:00.
+  useEffect(() => {
+    if (!cfg?.assistantEnabled || !cfg.assistantMorning) return;
+    const check = () => {
+      const d = new Date();
+      if (d.getHours() < 5 || d.getHours() >= 12) return;
+      const day = d.toDateString();
+      let last = morningDay;
+      try {
+        last = localStorage.getItem("gm.morning") ?? last;
+      } catch {
+        /* storage unavailable: the in-memory day still prevents repeats */
+      }
+      if (last === day) return;
+      morningDay = day;
+      try {
+        localStorage.setItem("gm.morning", day);
+      } catch {
+        /* ignore */
+      }
+      morningSummary().then((t) => (ay().muted ? ay().add("ayla", t) : speak(t)), () => {});
+    };
+    const first = window.setTimeout(check, 25_000);
+    const iv = window.setInterval(check, 5 * 60_000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(iv);
+    };
+  }, [cfg, ay]);
+
+  // Wake word: offline recogniser only, so room audio never leaves the computer.
+  useEffect(() => {
+    if (!cfg?.assistantEnabled || !cfg.assistantWake || !st?.localStt) return;
+    let loop: WakeLoop | null = null;
+    let busy = false;
+    let dead = false;
+    const paused = () => busy || !!rec.current || voice.isSpeaking() || ay().mode !== "idle";
+    wakeLoop(async (wav) => {
+      if (busy) return;
+      busy = true;
+      try {
+        const heard = await assistantApi.sttLocal(wav);
+        const m = wakeMatch(heard, cfg.assistantName);
+        if (!m.called || dead) return;
+        if (useGhost.getState().module !== "ayla") ay().setOpen(true);
+        if (m.rest.replace(/\s/g, "").length > 2) {
+          await handle(heard);
+        } else {
+          ay().add("ayla", "Efendim?");
+          await voice.say("Efendim?");
+          busy = false;
+          void listen();
+        }
+      } catch {
+        /* a failed transcription is just a missed wake word */
+      } finally {
+        busy = false;
+      }
+    }, paused).then(
+      (l) => (dead ? l.stop() : (loop = l)),
+      () => ay().add("ayla", "Sürekli dinleme için mikrofona erişemedim. Windows gizlilik ayarlarında mikrofon iznini kontrol edin."),
+    );
+    return () => {
+      dead = true;
+      loop?.stop();
+    };
+  }, [cfg, st, ay, listen]);
 
   // Ctrl+Space: talk. Escape (in the panel): close.
   useEffect(() => {

@@ -15,6 +15,9 @@ export type Intent =
   | { kind: "status" }
   | { kind: "alerts" }
   | { kind: "health" }
+  | { kind: "explain" }
+  | { kind: "respond" }
+  | { kind: "morning" }
   | { kind: "lanScan" }
   | { kind: "search"; engine: "google" | "youtube"; query: string }
   | { kind: "block"; target: string }
@@ -149,6 +152,14 @@ export function parse(input: string, name = ""): Intent {
     return { kind: "weather", city, when };
   }
 
+  if (/(sabah özeti|günün özeti|günlük özet|gece ne oldu|dün geceden beri)/.test(t)) return { kind: "morning" };
+  if (/(müdahale et|tehdidi (durdur|sınırla|engelle)|hızlı sınırla|^sınırla$|bunu durdur|önlem al)/.test(t)) return { kind: "respond" };
+  if (
+    /((bu|son|en ciddi) (bulgu|uyarı|tehdit)|bulguyu|uyarıyı|tehdidi)( \p{L}+)? (ne|nedir|anlat|açıkla)|bu ne demek|neden uyardın|bunu (anlat|açıkla)|ne buldun|bulgu(yu)? anlat/u.test(
+      t,
+    )
+  )
+    return { kind: "explain" };
   if (/(sağlık (puanı|skoru|durumu)|güvenlik (puanı|skoru|durumu)|puanım)/.test(t)) return { kind: "health" };
   if (/(ağı tara|ağ taraması|ağdaki cihaz|ağda kim|cihazları tara)/.test(t)) return { kind: "lanScan" };
   if (/(son (uyarı|olay|bulgu)|uyarıları (oku|söyle|göster)|ne oldu|tehdit var mı|şüpheli (bir şey|bir durum|durum) var mı)/.test(t))

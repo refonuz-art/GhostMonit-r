@@ -1,3 +1,4 @@
+import { wakeMatch } from "./mic";
 import { describe, expect, it } from "vitest";
 import { parse } from "./intents";
 
@@ -44,5 +45,22 @@ describe("Turkish command parsing", () => {
     expect(parse("google'da kuantum bilgisayar ara")).toEqual({ kind: "search", engine: "google", query: "kuantum bilgisayar" });
     expect(parse("youtube'da tarkan şımarık aç")).toEqual({ kind: "search", engine: "youtube", query: "tarkan şımarık" });
     expect(parse("evrenin yaşı kaç")).toMatchObject({ kind: "unknown" });
+  });
+
+  it("findings by voice", () => {
+    expect(parse("Ayla bu bulgu ne", "Ayla")).toEqual({ kind: "explain" });
+    expect(parse("bu uyarıyı açıkla")).toEqual({ kind: "explain" });
+    expect(parse("neden uyardın")).toEqual({ kind: "explain" });
+    expect(parse("müdahale et")).toEqual({ kind: "respond" });
+    expect(parse("sınırla")).toEqual({ kind: "respond" });
+    expect(parse("sabah özeti")).toEqual({ kind: "morning" });
+    expect(parse("chrome'u dondur")).toEqual({ kind: "freeze", target: "chrome" });
+  });
+
+  it("wake word", () => {
+    expect(wakeMatch("Ayla, durum nasıl?", "Ayla")).toEqual({ called: true, rest: "durum nasil" });
+    expect(wakeMatch("Aila.", "Ayla")).toEqual({ called: true, rest: "" });
+    expect(wakeMatch("bugün hava çok güzel", "Ayla").called).toBe(false);
+    expect(wakeMatch("dün akşam yemekte konuştuk ayla ile", "Ayla").called).toBe(false);
   });
 });

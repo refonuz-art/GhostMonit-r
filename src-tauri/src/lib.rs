@@ -92,7 +92,9 @@ pub fn run() {
             *shared.startup_rescan.lock() = Some(tx);
             watchers::spawn(app.handle().clone(), shared.clone());
             guard::spawn(app.handle().clone(), shared.clone());
+            guard::dnsrisk::init(app.handle().clone());
             guard::dnslog::spawn(shared.clone());
+            guard::remotecmd::spawn(app.handle().clone(), shared.clone());
             updater::spawn(app.handle().clone(), shared.clone());
             monitor::spawn(app.handle().clone(), shared.clone());
             shell::install_tray(app.handle())?;
@@ -161,6 +163,7 @@ pub fn run() {
             commands_assistant::assistant_set_claude,
             commands_assistant::assistant_tts,
             commands_assistant::assistant_stt,
+            commands_assistant::assistant_stt_local,
             commands_assistant::assistant_find_app,
             commands_assistant::assistant_launch,
             commands_assistant::assistant_open_url,
@@ -185,6 +188,8 @@ pub fn run() {
             commands_v5::proc_changes,
             commands_v5::proc_lineage,
             commands_v5::weekly_diff,
+            commands_v5::proc_traces,
+            commands_v5::remote_weekly_now,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ghost Monitor");

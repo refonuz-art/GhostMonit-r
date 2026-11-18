@@ -59,6 +59,18 @@ pub struct AppSettings {
     pub assistant_float: bool,
     /// City for weather answers (sent to Open-Meteo only when weather is asked).
     pub assistant_city: Option<String>,
+    /// Spoken morning summary once a day.
+    pub assistant_morning: bool,
+    /// Always-on listening for the assistant's name (offline recogniser only).
+    pub assistant_wake: bool,
+    /// Suspend programs started from a removable drive.
+    pub usb_shield: bool,
+    /// Findings for suspicious domains (random-looking names, NXDOMAIN bursts, risky TLDs).
+    pub dns_alerts: bool,
+    /// Freeze / block buttons under Telegram alerts.
+    pub remote_actions: bool,
+    /// Weekly diff summary to the phone on Sunday evening.
+    pub remote_weekly: bool,
 }
 
 pub const AZURE_VOICES: [&str; 2] = ["tr-TR-EmelNeural", "tr-TR-AhmetNeural"];
@@ -94,6 +106,12 @@ impl Default for AppSettings {
             assistant_min_severity: Severity::High,
             assistant_float: true,
             assistant_city: None,
+            assistant_morning: true,
+            assistant_wake: false,
+            usb_shield: true,
+            dns_alerts: true,
+            remote_actions: true,
+            remote_weekly: true,
         }
     }
 }

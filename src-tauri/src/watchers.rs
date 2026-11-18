@@ -87,7 +87,7 @@ fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
 }
 
-fn set_finding(shared: &Shared, f: Option<Finding>, key: &str) {
+pub(crate) fn set_finding(shared: &Shared, f: Option<Finding>, key: &str) {
     let mut w = shared.watch_findings.write();
     w.retain(|x| x.key != key);
     if let Some(f) = f {

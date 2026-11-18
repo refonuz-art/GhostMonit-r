@@ -118,6 +118,9 @@ export const v5 = {
   procChanges: (since: number, until: number, limit?: number) => invoke<ProcRun[]>("proc_changes", { since, until, limit }),
   procLineage: (pid: number, started: number) => invoke<ProcRun[]>("proc_lineage", { pid, started }),
   weekly: () => invoke<WeeklyDiff>("weekly_diff"),
+  traces: (exe: string, since: number, until: number) =>
+    invoke<{ remotes: IncidentContext["remotes"]; dns: IncidentContext["dns"] }>("proc_traces", { exe, since, until }),
+  weeklyToPhone: () => invoke<string>("remote_weekly_now"),
 };
 
 export const DNS_TYPE: Record<number, string> = { 1: "A", 5: "CNAME", 28: "AAAA", 33: "SRV", 16: "TXT", 15: "MX", 65: "HTTPS", 6: "SOA", 2: "NS" };

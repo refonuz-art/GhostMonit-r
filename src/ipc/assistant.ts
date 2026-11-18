@@ -62,6 +62,7 @@ export const assistantApi = {
   setClaude: (key: string | null) => invoke<AssistantStatus>("assistant_set_claude", { key }),
   tts: (text: string) => invoke<ArrayBuffer>("assistant_tts", { text }),
   stt: (wav: Uint8Array) => invoke<string>("assistant_stt", wav),
+  sttLocal: (wav: Uint8Array) => invoke<string>("assistant_stt_local", wav),
   findApp: (query: string) => invoke<AppEntry[]>("assistant_find_app", { query }),
   launch: (target: string) => invoke<string>("assistant_launch", { target }),
   openUrl: (url: string) => invoke<void>("assistant_open_url", { url }),

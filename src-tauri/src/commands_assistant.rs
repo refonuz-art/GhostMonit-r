@@ -62,6 +62,15 @@ pub async fn assistant_stt(s: State<'_, Arc<Shared>>, request: Request<'_>) -> R
     .await
 }
 
+/// Always the offline recogniser: wake-word listening must never send room audio to a cloud.
+#[tauri::command]
+pub async fn assistant_stt_local(s: State<'_, Arc<Shared>>, request: Request<'_>) -> R<String> {
+    let InvokeBody::Raw(wav) = request.body() else { return Err("Ses kaydı bekleniyordu".into()) };
+    let wav = wav.clone();
+    let shared = s.inner().clone();
+    blocking(move || whisper::transcribe(&shared, &wav)).await
+}
+
 /// Download and verify the offline recogniser (progress on `gm://assistant-install`).
 #[tauri::command]
 pub async fn assistant_install_stt(app: tauri::AppHandle, s: State<'_, Arc<Shared>>) -> R<assistant::AssistantStatus> {

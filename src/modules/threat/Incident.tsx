@@ -5,6 +5,8 @@ import { guard } from "../../ipc/guard";
 import type { Finding } from "../../ipc/types";
 import { v5, type IncidentContext } from "../../ipc/v5";
 import { useGhost } from "../../state/store";
+import { talkThrough } from "../../assistant/agent";
+import { useAyla } from "../../assistant/store";
 
 type StepState = "done" | "todo" | "na";
 
@@ -112,6 +114,11 @@ export function Incident({ f, live }: { f: Finding; live: boolean }) {
     <section className="ir">
       <header className="ir-head">
         <h3>Müdahale</h3>
+        {useAyla.getState().enabled && (
+          <button className="btn btn--quiet" onClick={() => void talkThrough(f)} title="Ayla bulguyu sesli anlatır ve adımları onayınızla uygular">
+            Ayla ile ilerle
+          </button>
+        )}
         {quickPossible && (
           <button className="btn btn--danger" disabled={busy !== null} onClick={contain} title="İşlemi dondurur ve internetini keser. İkisi de geri alınabilir.">
             {busy === "contain" ? "Sınırlandırılıyor…" : "Hızlı sınırla"}

@@ -207,6 +207,14 @@ fn lower(s: &str) -> String {
 /// Case-insensitive wildcard match (`*` any run, `?` one char). Without wildcards:
 /// equality, or substring when `contains_if_plain`.
 pub fn glob(pattern: &str, text: &str, contains_if_plain: bool) -> bool {
+    // "winword.exe|excel.exe": any alternative matches.
+    if pattern.contains('|') {
+        return pattern.split('|').map(str::trim).filter(|a| !a.is_empty()).any(|a| glob_one(a, text, contains_if_plain));
+    }
+    glob_one(pattern, text, contains_if_plain)
+}
+
+fn glob_one(pattern: &str, text: &str, contains_if_plain: bool) -> bool {
     let p: Vec<char> = lower(pattern.trim()).chars().collect();
     let t: Vec<char> = lower(text).chars().collect();
     if !p.iter().any(|c| *c == '*' || *c == '?') {
@@ -266,6 +274,13 @@ pub fn save(store: &crate::store::Store, rules: &[UserRule]) -> Result<(), Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn glob_alternatives() {
+        assert!(glob("winword.exe|excel.exe", "EXCEL.EXE", false));
+        assert!(!glob("winword.exe|excel.exe", "notepad.exe", false));
+        assert!(glob("temp|downloads", "c:/users/a/downloads/x.exe", true));
+    }
     use crate::model::{Protocol, SignatureInfo};
 
     fn rule() -> UserRule {

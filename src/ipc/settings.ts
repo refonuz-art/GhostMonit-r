@@ -30,6 +30,12 @@ export interface AppSettings {
   assistantMinSeverity: Severity;
   assistantFloat: boolean;
   assistantCity: string | null;
+  assistantMorning: boolean;
+  assistantWake: boolean;
+  usbShield: boolean;
+  dnsAlerts: boolean;
+  remoteActions: boolean;
+  remoteWeekly: boolean;
 }
 
 export interface UpdateInfo {

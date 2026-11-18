@@ -294,3 +294,56 @@ pub fn proc_lineage(s: S, pid: u32, started: i64) -> Vec<ProcRun> {
 pub fn weekly_diff(s: S) -> crate::weekly::WeeklyDiff {
     crate::weekly::build(&s.store.lock().conn, now())
 }
+
+// ---------------------------------------------------------------- 0.6: traces, phone summary
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Traces {
+    pub remotes: Vec<RemoteRef>,
+    pub dns: Vec<DnsRef>,
+}
+
+/// Network and DNS activity of one program between `since` and `until`.
+#[tauri::command]
+pub fn proc_traces(s: S, exe: String, since: i64, until: i64) -> R<Traces> {
+    let st = s.store.lock();
+    let db = &st.conn;
+    let mut q = db
+        .prepare(
+            "SELECT remote, port, hostname, country, MAX(ts), COUNT(*) FROM conn_history
+              WHERE exe = ?1 COLLATE NOCASE AND ts BETWEEN ?2 AND ?3 GROUP BY remote, port ORDER BY MIN(ts) LIMIT 100",
+        )
+        .map_err(|e| e.to_string())?;
+    let remotes = q
+        .query_map(params![exe, since, until], |r| {
+            Ok(RemoteRef { remote: r.get(0)?, port: r.get::<_, i64>(1)? as u16, hostname: r.get(2)?, country: r.get(3)?, last: r.get(4)?, count: r.get(5)? })
+        })
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    let mut q = db
+        .prepare(
+            "SELECT name, MAX(ts), COUNT(*) FROM dns_log WHERE exe = ?1 COLLATE NOCASE AND ts BETWEEN ?2 AND ?3
+              AND name NOT LIKE '%.arpa' GROUP BY name ORDER BY MIN(ts) LIMIT 100",
+        )
+        .map_err(|e| e.to_string())?;
+    let dns = q
+        .query_map(params![exe, since, until], |r| Ok(DnsRef { name: r.get(0)?, last: r.get(1)?, count: r.get(2)? }))
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    Ok(Traces { remotes, dns })
+}
+
+/// Send the weekly summary to the phone now (button in settings).
+#[tauri::command]
+pub async fn remote_weekly_now(s: State<'_, Arc<Shared>>) -> R<String> {
+    let shared = s.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let text = crate::guard::remotecmd::weekly_text(&shared);
+        crate::guard::remote::send_text(&shared, &text).map(|_| text)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}

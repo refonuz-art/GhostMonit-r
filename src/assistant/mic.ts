@@ -97,3 +97,106 @@ export async function record(): Promise<Recording> {
 
   return { done, finish: () => end(true), cancel: () => end(false), level: () => lvl };
 }
+
+export interface WakeLoop {
+  stop: () => void;
+}
+
+/**
+ * Always-on listening for the wake word. Cuts the microphone stream into utterances with
+ * the same energy detector as push-to-talk and hands each one (0.4–8 s) to `onUtterance`.
+ * While `paused()` is true (assistant speaking, push-to-talk, a transcription running)
+ * audio is dropped, so Ayla never hears herself.
+ */
+export async function wakeLoop(onUtterance: (wav: Uint8Array) => void, paused: () => boolean): Promise<WakeLoop> {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  });
+  const ctx = new AudioContext({ sampleRate: RATE });
+  const src = ctx.createMediaStreamSource(stream);
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const PRE = 2; // chunks kept before speech starts, so the first syllable isn't cut
+  let pre: Float32Array[] = [];
+  let chunks: Float32Array[] = [];
+  let noise = 0.01;
+  let speaking = false;
+  let started = 0;
+  let lastVoice = 0;
+
+  const emit = () => {
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const ms = (total / RATE) * 1000;
+    if (ms >= 400 && ms <= 8000) {
+      const all = new Float32Array(total);
+      let o = 0;
+      for (const c of chunks) {
+        all.set(c, o);
+        o += c.length;
+      }
+      onUtterance(encodeWav(all));
+    }
+    chunks = [];
+    speaking = false;
+  };
+
+  proc.onaudioprocess = (e) => {
+    const data = new Float32Array(e.inputBuffer.getChannelData(0));
+    if (paused()) {
+      pre = [];
+      chunks = [];
+      speaking = false;
+      return;
+    }
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+    const rms = Math.sqrt(sum / data.length);
+    const now = performance.now();
+    if (rms < noise * 2) noise = noise * 0.95 + rms * 0.05;
+    const voiced = rms > Math.max(0.02, noise * 3);
+    if (!speaking) {
+      pre.push(data);
+      if (pre.length > PRE) pre.shift();
+      if (voiced) {
+        speaking = true;
+        started = now;
+        lastVoice = now;
+        chunks = [...pre];
+        pre = [];
+      }
+      return;
+    }
+    chunks.push(data);
+    if (voiced) lastVoice = now;
+    if (now - lastVoice > 900 || now - started > 8000) emit();
+  };
+  src.connect(proc);
+  proc.connect(ctx.destination);
+  return {
+    stop: () => {
+      proc.disconnect();
+      src.disconnect();
+      stream.getTracks().forEach((t) => t.stop());
+      ctx.close().catch(() => {});
+    },
+  };
+}
+
+/** Whether a transcript calls the assistant by name; returns what follows the name. */
+export function wakeMatch(text: string, name: string): { called: boolean; rest: string } {
+  const fold = (s: string) =>
+    s
+      .toLocaleLowerCase("tr-TR")
+      .replace(/ı/g, "i")
+      .replace(/[^a-zçğöşü0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const t = fold(text);
+  const n = fold(name);
+  if (!n) return { called: false, rest: "" };
+  // whisper's usual spellings of "Ayla".
+  const variants = n === "ayla" ? ["ayla", "aila", "eyla", "hayla", "ayle", "aylaa"] : [n];
+  const words = t.split(" ");
+  const at = words.findIndex((w) => variants.some((v) => w === v || (w.startsWith(v) && w.length - v.length <= 3)));
+  if (at < 0 || at > 2) return { called: false, rest: "" };
+  return { called: true, rest: words.slice(at + 1).join(" ") };
+}

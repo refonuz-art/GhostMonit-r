@@ -23,6 +23,8 @@ interface AylaState {
   mode: Mode;
   lines: Line[];
   pending: Pending | null;
+  /** Finding shown on the Threat screen ("bu bulgu ne?"). */
+  focus: string | null;
   /** Severity of the alert being presented; tints the hologram until it fades. */
   alert: Severity | null;
   /** Alerts are still shown but not spoken. */
@@ -47,6 +49,7 @@ export const useAyla = create<AylaState>((set) => ({
   mode: "idle",
   lines: [],
   pending: null,
+  focus: null,
   alert: null,
   muted: false,
   subtitle: null,

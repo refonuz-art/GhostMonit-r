@@ -144,6 +144,12 @@ fn run(app: AppHandle, shared: Arc<Shared>) {
             // ---- process start events ----
             let pids: HashSet<u32> = procs.iter().map(|p| p.pid).collect();
             if let Some(prev) = &prev_pids {
+                let fresh: Vec<&crate::model::ProcessInfo> = procs.iter().filter(|p| !prev.contains(&p.pid)).collect();
+                // The shared list still holds the previous tick; the shield needs these pids.
+                if !fresh.is_empty() && shared.settings.read().usb_shield {
+                    shared.processes.write().extend(fresh.iter().map(|p| (*p).clone()));
+                    crate::guard::usbshield::check(&app, &shared, &fresh);
+                }
                 for p in procs.iter().filter(|p| !prev.contains(&p.pid)) {
                     emit_event(
                         &app,

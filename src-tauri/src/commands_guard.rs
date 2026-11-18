@@ -176,9 +176,8 @@ extern "system" {
     fn NtResumeProcess(h: windows::Win32::Foundation::HANDLE) -> i32;
 }
 
-/// Freeze (or thaw) a process without killing it — the safe first response to ransomware.
-#[tauri::command]
-pub fn suspend_process(app: AppHandle, s: S, pid: u32, suspend: bool) -> R<String> {
+/// Freeze (or thaw) a process. Shared by the UI command, the USB shield and remote actions.
+pub fn suspend_pid(s: &Shared, pid: u32, suspend: bool) -> Result<crate::model::ProcessInfo, String> {
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Threading::{OpenProcess, PROCESS_SUSPEND_RESUME};
     if pid <= 4 || pid == std::process::id() {
@@ -198,6 +197,18 @@ pub fn suspend_process(app: AppHandle, s: S, pid: u32, suspend: bool) -> R<Strin
     };
     if status != 0 {
         return Err(format!("İşlem {} (NTSTATUS 0x{status:08X})", if suspend { "dondurulamadı" } else { "devam ettirilemedi" }));
+    }
+    Ok(p)
+}
+
+/// Freeze (or thaw) a process without killing it — the safe first response to ransomware.
+#[tauri::command]
+pub fn suspend_process(app: AppHandle, s: S, pid: u32, suspend: bool) -> R<String> {
+    let p = suspend_pid(&s, pid, suspend)?;
+    if !suspend {
+        if let Some(exe) = p.exe.as_deref().filter(|e| guard::usbshield::on_removable(&s, e)) {
+            guard::usbshield::allow(exe);
+        }
     }
     let msg = format!("{} (PID {pid}) {}", p.name, if suspend { "donduruldu" } else { "devam ettirildi" });
     emit_event(&app, &s, event("process.suspend", Severity::Low, msg.clone(), p.exe.clone().unwrap_or_default(), Some(p.name.clone()), json!({ "pid": pid, "suspend": suspend })));

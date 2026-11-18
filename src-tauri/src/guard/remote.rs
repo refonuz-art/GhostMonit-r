@@ -107,12 +107,24 @@ fn agent() -> ureq::Agent {
     ureq::Agent::config_builder().http_status_as_error(false).timeout_global(Some(Duration::from_secs(15))).build().into()
 }
 
-fn send_text(shared: &Shared, text: &str) -> Result<usize, String> {
+pub(crate) fn telegram_creds(shared: &Shared) -> Option<(String, String)> {
+    Some((get(shared, TG_TOKEN)?, get(shared, TG_CHAT)?))
+}
+
+pub(crate) fn send_text(shared: &Shared, text: &str) -> Result<usize, String> {
+    send_with(shared, text, None)
+}
+
+/// `markup` = Telegram inline keyboard; Discord gets the text only.
+fn send_with(shared: &Shared, text: &str, markup: Option<serde_json::Value>) -> Result<usize, String> {
     let mut sent = 0;
     let mut errors = Vec::new();
     if let (Some(t), Some(c)) = (get(shared, TG_TOKEN), get(shared, TG_CHAT)) {
         let url = format!("https://api.telegram.org/bot{t}/sendMessage");
-        let body = serde_json::json!({ "chat_id": c, "text": text, "disable_web_page_preview": true });
+        let mut body = serde_json::json!({ "chat_id": c, "text": text, "disable_web_page_preview": true });
+        if let Some(m) = markup {
+            body["reply_markup"] = m;
+        }
         match agent().post(&url).header("Content-Type", "application/json").send(body.to_string()) {
             Ok(r) if r.status().is_success() => sent += 1,
             Ok(r) => errors.push(format!("Telegram: HTTP {}", r.status().as_u16())),
@@ -164,9 +176,15 @@ pub fn maybe_send(app: &tauri::AppHandle, shared: &Shared, e: &SecurityEvent) {
         let d: String = e.detail.chars().take(600).collect();
         text.push_str(&format!("\n{d}"));
     }
+    let markup = if s.remote_actions { super::remotecmd::buttons_for(shared, e) } else { None };
+    if markup.is_some() {
+        text.push_str("
+
+Aşağıdaki düğmelerle bilgisayara dokunmadan müdahale edebilirsiniz.");
+    }
     let Some(shared) = app.try_state::<std::sync::Arc<Shared>>().map(|s| s.inner().clone()) else { return };
     std::thread::spawn(move || {
-        if let Err(err) = send_text(&shared, &text) {
+        if let Err(err) = send_with(&shared, &text, markup) {
             log::warn!("remote notify: {err}");
         }
     });

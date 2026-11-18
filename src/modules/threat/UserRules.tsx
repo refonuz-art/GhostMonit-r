@@ -3,6 +3,7 @@ import { SEV_LABEL, Sev } from "../../design/components";
 import type { Severity } from "../../ipc/types";
 import { newRule, v5, type RuleMatch, type UserRule } from "../../ipc/v5";
 import { useGhost } from "../../state/store";
+import { RULE_TEMPLATES, fromTemplate } from "./ruleTemplates";
 
 const SIGNER: [UserRule["signer"], string][] = [
   ["any", "fark etmez"],
@@ -54,6 +55,25 @@ export function RuleList({ st }: { st: RulesState }) {
         >
           + Yeni kural
         </button>
+        <select
+          className="field ur-tpl"
+          value=""
+          aria-label="Hazır kural şablonu"
+          onChange={(e) => {
+            const t = RULE_TEMPLATES.find((x) => x.id === e.target.value);
+            if (!t) return;
+            const r = fromTemplate(t);
+            setDraft(r);
+            setSel(r.id);
+          }}
+        >
+          <option value="">Hazır şablondan…</option>
+          {RULE_TEMPLATES.map((t) => (
+            <option key={t.id} value={t.id} title={t.why}>
+              {t.title}
+            </option>
+          ))}
+        </select>
       </div>
       {rules.length === 0 && (
         <div className="empty">

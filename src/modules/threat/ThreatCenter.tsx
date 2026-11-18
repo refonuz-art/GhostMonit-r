@@ -13,6 +13,7 @@ import { Explain } from "./Explain";
 import { Incident } from "./Incident";
 import { RuleEditor, RuleList, useUserRules } from "./UserRules";
 import "./threat.css";
+import { useAyla } from "../../assistant/store";
 
 type Tab = "active" | "history" | "rules";
 
@@ -185,6 +186,11 @@ export default function ThreatCenter() {
     return src.filter((f) => SEVERITIES.indexOf(f.severity) >= SEVERITIES.indexOf(minSev));
   }, [tab, findings, history, minSev]);
   const current = list.find((f) => f.key === sel) ?? list[0] ?? null;
+  // Lets the assistant answer "bu bulgu ne?" about what is on screen.
+  useEffect(() => {
+    useAyla.setState({ focus: current?.key ?? null });
+  }, [current?.key]);
+  useEffect(() => () => useAyla.setState({ focus: null }), []);
 
   const dist = SEVERITIES.map((s) => ({ s, n: findings.filter((f) => f.severity === s).length }));
   const maxN = Math.max(1, ...dist.map((d) => d.n));

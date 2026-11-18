@@ -241,6 +241,26 @@ const RULES: Record<string, Omit<Explanation, "rule">> = {
     why: "Modeminizin adresi farklı bir cihaza geçti. Modemi değiştirdiyseniz normaldir; değiştirmediyseniz ağdaki biri trafiğinizi kendi üzerinden geçiriyor olabilir (ARP zehirleme).",
     todo: "Modemi değiştirmediyseniz ağdaki tanımadığınız cihazları kontrol edin ve şifre girmeden önce bağlantınızın güvenli olduğundan emin olun.",
   },
+  "dns.nx_burst": {
+    why: "Bir program kısa sürede onlarca var olmayan alan adını sordu. Zararlı yazılımlar komuta sunucusunu bulmak için her gün değişen rastgele adlar üretir ve çoğu boşa çıkar; bu desen tam olarak budur.",
+    todo: "Programı tanımıyorsanız müdahale panelinden dondurup internetini kesin, ardından karantinaya alın.",
+  },
+  "dns.random_risky": {
+    why: "Sorulan alan adı insan eliyle seçilmiş gibi durmuyor ve kötüye kullanımla bilinen bir uzantıya sahip. Bu ikisinin birlikteliği zararlı altyapının tipik işaretidir.",
+    todo: "Hangi programın sorduğuna bakın. Tanımıyorsanız internetini kesin.",
+  },
+  "dns.random": {
+    why: "Sorulan alan adı rastgele üretilmiş gibi görünüyor. Bazı meşru servisler de böyle adlar kullanır, ama zararlıların komuta sunucuları da çoğu zaman böyledir.",
+    todo: "Sorgulayan program tanıdık ve imzalıysa büyük olasılıkla zararsızdır; değilse inceleyin.",
+  },
+  "dns.risky_tld": {
+    why: "Tarayıcı dışındaki bir program, kötüye kullanımı yüksek bir uzantıdaki (.top, .xyz gibi) siteye bağlanmaya çalıştı.",
+    todo: "Program güncelleme ya da oyun istemcisi gibi tanıdık bir şeyse sorun yok; tanımıyorsanız dosyasını tarayın.",
+  },
+  "usb.exec": {
+    why: "Program bir USB bellek gibi çıkarılabilir sürücüden başlatıldı. USB solucanları ve kötü amaçlı taşınabilir araçlar bu yolla bulaşır; USB kalkanı programı dondurdu.",
+    todo: "Programı siz çalıştırdıysanız ve güveniyorsanız İşlem Avcısı'ndan devam ettirin. Tanımıyorsanız kapatıp karantinaya alın.",
+  },
 };
 
 /** Signals from the user's own rules ("user.<id>"). */

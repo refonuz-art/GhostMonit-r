@@ -38,12 +38,17 @@ function life(r: ProcRun, at: number) {
   return duration(Math.max(0, Math.round((end - r.started) / 1000)));
 }
 
+type Traces = Awaited<ReturnType<typeof v5.traces>>;
+
 function RunDetail({ r }: { r: ProcRun }) {
   const [lineage, setLineage] = useState<ProcRun[] | null>(null);
+  const [traces, setTraces] = useState<Traces | null>(null);
   useEffect(() => {
     setLineage(null);
+    setTraces(null);
     v5.procLineage(r.pid, r.started).then(setLineage, () => setLineage([]));
-  }, [r.pid, r.started]);
+    if (r.exe) v5.traces(r.exe, r.started - 5000, (r.ended ?? Date.now()) + 5000).then(setTraces, () => setTraces({ remotes: [], dns: [] }));
+  }, [r.pid, r.started, r.ended, r.exe]);
   return (
     <div className="tm-detail">
       <h3>
@@ -81,6 +86,45 @@ function RunDetail({ r }: { r: ProcRun }) {
           ))}
           <li className="is-self">{r.name}</li>
         </ol>
+      )}
+      <h4>Bu çalışma sırasında bağlandığı adresler</h4>
+      {!r.exe ? (
+        <p className="dim">Dosya yolu okunamadığı için eşleştirilemiyor.</p>
+      ) : traces === null ? (
+        <p className="dim">…</p>
+      ) : traces.remotes.length === 0 ? (
+        <p className="dim">Kayıtlı internet bağlantısı yok.</p>
+      ) : (
+        <ul className="tm-traces">
+          {traces.remotes.map((c) => (
+            <li key={`${c.remote}:${c.port}`} title={c.country ?? ""}>
+              <span className="mono">
+                {c.remote}:{c.port}
+              </span>
+              {c.hostname && <span className="dim"> {c.hostname}</span>}
+              <span className="mono dim"> {hm(c.last)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <h4>Sorguladığı alan adları</h4>
+      {!r.exe ? null : traces === null ? (
+        <p className="dim">…</p>
+      ) : traces.dns.length === 0 ? (
+        <p className="dim">Bu programa bağlanabilen DNS sorgusu yok (önbellek modunda eşleştirme tahminidir).</p>
+      ) : (
+        <ul className="tm-traces">
+          {traces.dns.map((d) => (
+            <li key={d.name}>
+              <span className="mono">{d.name}</span>
+              <span className="mono dim">
+                {" "}
+                {hm(d.last)}
+                {d.count > 1 ? ` · ${d.count}×` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

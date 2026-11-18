@@ -3,7 +3,7 @@
 > Yeni oturumda önce bu dosyayı oku. Gereksinimler: `prompt.md`. Kullanıcı tüm onayları verdi; fazları sırayla ilerlet.
 
 ## Durum özeti
-**Güncel: 0.5.0 (müdahale, Kurallarım, DNS, zaman makinesi, haftalık fark) — ayrıntı en altta.** 0.4.0 ve 0.5.0 GitHub'da TASLAK; kullanıcı test edince yayımlanacak.
+**Güncel: 0.6.0 — ayrıntı en altta (0.5.0 ve 0.6.0 bölümleri).** 0.4.0, 0.5.0 ve 0.6.0 GitHub'da TASLAK; kullanıcı test edince yayımlanacak.
 **Faz 1–10 + v0.2.0 eklentileri tamam.** Sürüm 0.2.0 GitHub'da: https://github.com/refonuz-art/GhostMonit-r/releases (yalnızca yükleyici + latest.json; kaynak kod depoya YÜKLENMEDİ). Kullanıcının makinesinde kurulu (`%LOCALAPPDATA%\Ghost Monitor`), Windows açılışında tepside başlıyor.
 
 ## Çalıştırma
@@ -214,3 +214,18 @@ Kullanıcı öneri listesindeki ilk 5 maddeyi istedi. DB migration v4: `proc_his
 - Testler: 90 Rust (+2 ignored), 25 vitest, tsc temiz. Canlı (dev) doğrulanan: müdahale panelinde PythonForge'un Run kaydı + soy zinciri, kural "Şimdi dene" 8 eşleşme, DNS önbellek modu gerçek kayıtlar (svchost, backgroundTaskHost, node), zaman makinesi gerçek başla/kapandı olayları, haftalık fark gerçek verilerle.
 - DOĞRULANMAYAN: ETW modu (yönetici gerekiyor, bu oturumda yönetici örneği açılmadı), müdahale panelinden gerçek dondur/engelle/karantina (kullanıcının programlarına dokunmamak için denenmedi; alttaki komutlar 0.3'ten beri var).
 - Dev sürümde kurulu Ghost Monitor'ün açılış kaydı "imzasız dosya" bulgusu olarak görünür (kendini hariç tutma `current_exe` ile; kurulu sürümde sorun yok).
+
+## 0.6.0 — Ayla müdahalesi, sabah özeti, uyanma kelimesi, DNS uyarıları, USB kalkanı, telefondan müdahale (2026-11-19)
+Kullanıcı öneri listesinin 1–10. maddelerini istedi (11 abuse.ch anahtarı ve 12 kod imzalama sertifikası **şimdilik yapılmayacak**).
+1. **Ayla bulgu anlatır + sesli müdahale** — `agent.ts` `explainFinding` / `respondToFinding` / `talkThrough`; intent `explain` ("bu bulgu ne", "neden uyardın"), `respond` ("müdahale et", "sınırla"). Odak bulgu `useAyla.focus` (ThreatCenter seçili bulguyu yazar; yoksa en ciddi açık bulgu). Akış: dondur+interneti kes onayı → (zincirleme `ask`) kapat+karantina onayı; açılış kaydı varsa sözlü not. Claude araçları `explain_finding`, `respond_to_finding`. Müdahale panelinde "Ayla ile ilerle".
+2. **Sabah özeti** — `morningSummary()`; Assistant.tsx her gün 05–12 arası ilk çalışmada (localStorage `gm.morning` + bellek). Son 12 saat orta+ olaylar, açık bulgular, puan (haftalık fark ile), hava (şehir varsa). Ayar `assistantMorning` (varsayılan açık). Intent `morning`.
+3. **Uyanma kelimesi** — `mic.ts` `wakeLoop` (sürekli VAD, 0.4–8 sn parçalar, Ayla konuşurken/bas-konuş/çözümleme sırasında duraklar) + `wakeMatch` (aila/eyla/hayla varyantları, ilk 3 kelimede). Yalnız yerel whisper: yeni komut `assistant_stt_local` (Azure ayarlı olsa bile buluta ses gitmez). Ayar `assistantWake` varsayılan KAPALI, yerel tanıma kurulu değilse açılamaz. **Canlı denenmedi** (gece mikrofon/ses testi yapmadım).
+4. **Azure sesi** — kod 0.4.0'dan beri hazır; yalnızca kullanıcının Azure Speech anahtarı + bölgesi gerekiyor (Ayarlar → Asistan). Hâlâ bekliyor.
+5. **Şüpheli alan adı** — `guard/dnsrisk.rs`, `dnslog::write` sonrası her kayıt için. Kayıtlı etiket (registrable label; com.tr/co.uk dahil) üzerinde: rastgele görünüm (≥12 karakter, entropi ≥3.5 + az ünlü/uzun ünsüz dizisi/rakam karışımı) → Orta; + riskli TLD → Yüksek; aynı programdan 5 dk'da 25+ farklı NXDOMAIN (9003) → Yüksek; tarayıcı dışı riskli TLD → Düşük. CDN/bulut sonekleri hariç. Bulgular `watch_findings` (anahtar `domain:` / `dnsburst:`), olay `dns.suspicious`. Ayar `dnsAlerts`. Gerçek DNS geçmişindeki 116 adda 0 yanlış alarm (`real_data` ignored testi, `GM_NAMES=dosya`).
+6. **Kural şablonları** — `src/modules/threat/ruleTemplates.ts` (8 şablon), Kurallarım'da "Hazır şablondan…" seçici; şablon düzenleyiciye açılır, kaydedilmez. Kalıplarda `|` = veya (`glob` → `glob_one`).
+7. **Telegram'dan müdahale** — `guard/remotecmd.rs`: uyarıya inline düğmeler (Dondur / İnterneti kes, sonra Devam ettir), `getUpdates` uzun sorgu (25 sn, port açılmaz). Yalnız ayarlı sohbet; jetonlar bellekte (yeniden başlatınca eski düğmeler geçersiz). İnternet kesme yalnızca yönetici modunda (yoksa UAC ekranda beklerdi; mesaj bunu söyler). `remote.rs` `send_with(markup)`. Ayar `remoteActions`. **Canlı denenmedi** (kullanıcının Telegram'ı bağlı değil/denenmedi).
+8. **Zaman makinesinde izler** — komut `proc_traces(exe, since, until)`; RunDetail'de bağlantılar (`conn_history`) ve DNS adları. Canlı doğrulandı (OneDrive: 8 adres + sharepoint adları). Not: `conn_history` her (program, adres) çiftinin oturumdaki ilk görülmesini kaydeder.
+9. **USB kalkanı** — `guard/usbshield.rs`: yeni işlemin exe'si çıkarılabilir sürücüdeyse (`GetDriveTypeW`==2 veya `shared.drives`) `commands_guard::suspend_pid` ile dondurulur, bulgu `usbrun:` + olay `usb.exec` (Yüksek). Devam ettirilen exe oturum boyunca muaf (`allow`). Ayar `usbShield` varsayılan AÇIK. **Gerçek USB ile denenmedi.**
+10. **Haftalık özet telefona** — `remotecmd::weekly_due` 10 dk'da bir: son geçen Pazar 20:00 dilimi, 36 saat içinde ve ayar `remote_weekly_sent` farklıysa gönderir. `remote_weekly_now` komutu + Ayarlar'da "Şimdi gönder". Ayar `remoteWeekly`.
+- `commands_guard::suspend_pid` artık ortak (UI, USB kalkanı, Telegram).
+- Testler: 96 Rust (+3 ignored), 27 vitest, tsc temiz. Canlı (dev): şablon seçici + düzenleyici, zaman makinesi izleri, yeni ayar satırları.

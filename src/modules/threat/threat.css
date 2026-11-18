@@ -389,6 +389,13 @@
 .ur-new {
   padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+}
+.ur-tpl {
+  flex: 1;
+  min-width: 0;
 }
 .ur-row.is-off {
   opacity: 0.5;

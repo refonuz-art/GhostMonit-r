@@ -9,6 +9,7 @@ import { settingsApi, type AppSettings, type UpdateInfo } from "../../ipc/settin
 import { on } from "../../ipc/api";
 import type { Severity } from "../../ipc/types";
 import { useGhost } from "../../state/store";
+import { v5 } from "../../ipc/v5";
 import "./settings.css";
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -520,6 +521,18 @@ export default function Settings() {
           <Row title="USB sürücü izleme" hint="Takılan her sürücü kaydedilir; kökünde otomatik çalışan dosya veya program varsa işaretlenir.">
             <Switch label="USB izleme" on={s.usbWatch} onChange={(v) => save({ usbWatch: v })} />
           </Row>
+          <Row
+            title="USB kalkanı"
+            hint="Çıkarılabilir bir sürücüden başlatılan program görüldüğü anda dondurulur ve bulgu olarak gösterilir. Güvendiğiniz programı İşlem Avcısı'ndan devam ettirdiğinizde bir daha dondurulmaz (Ghost Monitor yeniden başlayana kadar)."
+          >
+            <Switch label="USB kalkanı" on={s.usbShield} onChange={(v) => save({ usbShield: v })} />
+          </Row>
+          <Row
+            title="Şüpheli alan adı uyarıları"
+            hint="DNS geçmişinde rastgele üretilmiş gibi görünen adlar, bir programın kısa sürede çok sayıda var olmayan adı sorması ve tarayıcı dışında kötü şöhretli uzantılar (.top, .xyz…) bulgu olarak işaretlenir."
+          >
+            <Switch label="Alan adı uyarıları" on={s.dnsAlerts} onChange={(v) => save({ dnsAlerts: v })} />
+          </Row>
         </section>
 
         <section>
@@ -568,6 +581,23 @@ export default function Settings() {
           >
             <Switch label="Ayrıntıları gönder" on={s.remoteDetails} onChange={(v) => save({ remoteDetails: v })} />
           </Row>
+          <Row
+            title="Telefondan müdahale"
+            hint="Telegram uyarılarının altına “Dondur” ve “İnterneti kes” düğmeleri eklenir. Düğmeler yalnızca ayarlı sohbetten ve bu oturumda gönderilen uyarılar için çalışır. İnternet kesme, Ghost Monitor yönetici olarak çalışıyorsa yapılabilir."
+            note="Ghost Monitor düğme basışlarını Telegram'dan 25 saniyelik uzun sorgularla okur; bilgisayarda port açılmaz."
+          >
+            <Switch label="Telefondan müdahale" on={s.remoteActions} onChange={(v) => save({ remoteActions: v })} />
+          </Row>
+          <Row title="Haftalık özet" hint="Pazar akşamı 20.00'den sonra haftalık farkın kısa özeti telefona gönderilir. Bilgisayar o saatte kapalıysa ertesi gün gider.">
+            <Switch label="Haftalık özet" on={s.remoteWeekly} onChange={(v) => save({ remoteWeekly: v })} />
+            <button
+              className="btn btn--quiet"
+              disabled={!(phone.telegram || phone.discord)}
+              onClick={() => v5.weeklyToPhone().then(() => notify("Haftalık özet gönderildi"), (e) => notify(String(e), "bad"))}
+            >
+              Şimdi gönder
+            </button>
+          </Row>
         </section>
 
         <section>
@@ -580,6 +610,20 @@ export default function Settings() {
           </Row>
           <Row title="Figürü ekranda göster" hint="Kapalıyken asistan yine konuşur; panel Ctrl+Boşluk ile açılır.">
             <Switch label="Figür" on={s.assistantFloat} onChange={(v) => save({ assistantFloat: v })} />
+          </Row>
+          <Row title="Sabah özeti" hint="Her gün 05.00–12.00 arasında Ghost Monitor ilk çalıştığında gece olanları, güvenlik puanını ve (şehir ayarlıysa) hava durumunu söyler. İstediğiniz an “sabah özeti” diyebilirsiniz.">
+            <Switch label="Sabah özeti" on={s.assistantMorning} onChange={(v) => save({ assistantMorning: v })} />
+          </Row>
+          <Row
+            title={`“${s.assistantName}” diye seslenince dinle`}
+            hint={`Mikrofon sürekli açık kalır; konuşma algılandığında kısa parça yerel konuşma tanımayla (internetsiz) yazıya çevrilir ve “${s.assistantName}” geçiyorsa komut olarak işlenir. “${s.assistantName}, durum nasıl” gibi tek cümle de olur. Ses hiçbir yere gönderilmez; Azure ayarlı olsa bile bu özellik yalnızca yerel tanımayı kullanır.`}
+            note={asst?.localStt ? "İşlemci kullanımı yalnızca konuşma duyulduğunda artar. Windows görev çubuğunda mikrofon simgesi sürekli görünür." : "Önce aşağıdan yerel konuşma tanımayı kurun."}
+          >
+            <Switch
+              label="Uyanma kelimesi"
+              on={s.assistantWake && !!asst?.localStt}
+              onChange={(v) => (asst?.localStt ? save({ assistantWake: v }) : notify("Önce yerel konuşma tanımayı kurun", "warn"))}
+            />
           </Row>
           <Row title="Uyarıları sesli oku" hint="Seçilen düzey ve üstündeki yeni olaylar sesli okunur. Arka arkaya gelen uyarılar tek cümlede toplanır.">
             <Switch label="Sesli uyarı" on={s.assistantSpeakAlerts} onChange={(v) => save({ assistantSpeakAlerts: v })} />
