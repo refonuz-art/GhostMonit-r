@@ -16,6 +16,12 @@ describe("explanations", () => {
     expect([...ids].filter((r) => !KNOWN_RULES.includes(r))).toEqual([]);
   });
 
+  it("explains the user's own rules", () => {
+    const out = explainSignals([{ rule: "user.abc-1", weight: 30, label: "Kendi kuralınız: x", evidence: "" }]);
+    expect(out).toHaveLength(1);
+    expect(out[0].why).toContain("sizin yazdığınız");
+  });
+
   it("dedupes by rule, strongest first", () => {
     const s = (rule: string, weight: number) => ({ rule, weight, label: "", evidence: "" });
     const out = explainSignals([s("sig.unsigned", 5), s("ps.cmdline", 15), s("ps.cmdline", 25), s("nope", 99)]);

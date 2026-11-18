@@ -239,6 +239,15 @@ pub fn build(shared: &Shared) -> HealthReport {
 
 pub fn refresh(shared: &Shared) {
     let r = build(shared);
+    // Keep one score per day (latest wins) for the weekly comparison.
+    if r.checks.iter().any(|c| c.status != Status::Unknown) {
+        let day = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let checks: Vec<(&str, &Status)> = r.checks.iter().map(|c| (c.label.as_str(), &c.status)).collect();
+        let _ = shared.store.lock().conn.execute(
+            "INSERT OR REPLACE INTO health_history (day, score, checks, ts) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![day, r.score, serde_json::to_string(&checks).unwrap_or_default(), r.computed],
+        );
+    }
     shared.guard.write().health = Some(r);
 }
 

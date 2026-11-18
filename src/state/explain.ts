@@ -243,11 +243,17 @@ const RULES: Record<string, Omit<Explanation, "rule">> = {
   },
 };
 
+/** Signals from the user's own rules ("user.<id>"). */
+const USER_RULE: Omit<Explanation, "rule"> = {
+  why: "Bu uyarıyı sizin yazdığınız bir kural üretti; seviyesini de siz seçtiniz. Ghost Monitor'ün kendi kuralları ayrıca değerlendirilir.",
+  todo: "Kuralı yazarken bu durumda ne yapmayı düşündüyseniz onu uygulayın. Kural fazla geniş yakalıyorsa Tehdit → Kurallarım'dan daraltın.",
+};
+
 export function explainSignals(signals: Signal[]): Explanation[] {
   const seen = new Set<string>();
   const out: Explanation[] = [];
   for (const s of [...signals].sort((a, b) => b.weight - a.weight)) {
-    const e = RULES[s.rule];
+    const e = s.rule.startsWith("user.") ? USER_RULE : RULES[s.rule];
     if (!e || seen.has(s.rule)) continue;
     seen.add(s.rule);
     out.push({ rule: s.rule, ...e });

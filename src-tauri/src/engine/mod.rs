@@ -7,6 +7,7 @@
 //! - CRITICAL requires at least two independent rules (or a definitive indicator).
 
 pub mod rules;
+pub mod user_rules;
 
 use std::collections::{HashMap, HashSet};
 
@@ -68,6 +69,7 @@ pub struct EngineInput<'a> {
     pub learning: bool,
     pub trusted: &'a HashSet<String>,
     pub bad_hash_hits: &'a HashMap<String, String>,
+    pub user_rules: &'a [user_rules::UserRule],
     pub now: i64,
 }
 
@@ -125,6 +127,26 @@ impl Engine {
             }
 
             let conns = by_pid.get(&p.pid).map(|v| v.as_slice()).unwrap_or(&[]);
+            let parent = p.ppid.and_then(|pp| names.get(&pp).copied());
+
+            // User rules: "ignore" silences the process entirely; "alert" adds a signal.
+            let mut user_hits: Vec<(&user_rules::UserRule, String)> = Vec::new();
+            let mut ignored = false;
+            for r in inp.user_rules.iter().filter(|r| r.enabled) {
+                if let Some(ev) = r.matches(p, parent, conns) {
+                    match r.action {
+                        user_rules::Action::Ignore => {
+                            ignored = true;
+                            break;
+                        }
+                        user_rules::Action::Alert => user_hits.push((r, ev)),
+                    }
+                }
+            }
+            if ignored {
+                continue;
+            }
+
             let mut new_ports = Vec::new();
             for c in conns {
                 let is_listen = c.state == "LISTEN" || (c.state == "BOUND" && c.local_port != 0);
@@ -142,7 +164,7 @@ impl Engine {
             let mut signals = Vec::new();
             signals.extend(rules::masquerade(p));
             signals.extend(rules::signature_and_location(p));
-            signals.extend(rules::parent_child(p, p.ppid.and_then(|pp| names.get(&pp).copied())));
+            signals.extend(rules::parent_child(p, parent));
             signals.extend(rules::command_line(p));
             signals.extend(rules::network(p, conns));
             signals.extend(rules::listening(p, &new_ports));
@@ -159,6 +181,17 @@ impl Engine {
                 }
             }
 
+            let mut floor: Option<Severity> = None;
+            for (r, ev) in &user_hits {
+                signals.push(Signal {
+                    rule: r.rule_id(),
+                    label: format!("Kendi kuralınız: {}", r.name),
+                    weight: user_rules::weight_of(r.severity),
+                    evidence: ev.clone(),
+                });
+                floor = floor.max(Some(r.severity));
+            }
+
             if signals.is_empty() {
                 continue;
             }
@@ -169,7 +202,10 @@ impl Engine {
             if inp.trusted.contains(&key) {
                 continue;
             }
-            let (score, severity) = score(&signals);
+            let (score, mut severity) = score(&signals);
+            if let Some(f) = floor {
+                severity = severity.max(f);
+            }
             if severity == Severity::Info && signals.iter().all(|s| s.rule == "sig.unsigned") {
                 // A bare "unsigned" binary in Program Files is normal; don't surface it.
                 continue;
@@ -303,12 +339,13 @@ mod tests {
         baseline: HashSet<String>,
         trusted: HashSet<String>,
         hashes: HashMap<String, String>,
+        rules: Vec<user_rules::UserRule>,
         learning: bool,
     }
 
     impl World {
         fn new(procs: Vec<ProcessInfo>, conns: Vec<ConnectionInfo>) -> Self {
-            Self { procs, conns, baseline: HashSet::new(), trusted: HashSet::new(), hashes: HashMap::new(), learning: false }
+            Self { procs, conns, baseline: HashSet::new(), trusted: HashSet::new(), hashes: HashMap::new(), rules: vec![], learning: false }
         }
         fn run(&self, engine: &mut Engine, now: i64) -> EngineOutput {
             engine.evaluate(&EngineInput {
@@ -318,6 +355,7 @@ mod tests {
                 learning: self.learning,
                 trusted: &self.trusted,
                 bad_hash_hits: &self.hashes,
+                user_rules: &self.rules,
                 now,
             })
         }
@@ -444,6 +482,31 @@ mod tests {
     fn pending_signature_waits() {
         let procs = vec![p(9000, None, "a.exe", r"C:\Users\u\AppData\Local\Temp\a.exe", SignatureState::Pending, None)];
         assert!(World::new(procs, vec![]).run(&mut Engine::default(), 0).findings.is_empty());
+    }
+
+    #[test]
+    fn user_rules_alert_and_ignore() {
+        let game = p(9100, None, "game.exe", r"D:\Games\Foo\game.exe", SignatureState::Unsigned, None);
+        let mut w = World::new(vec![game], vec![]);
+        let mut r: user_rules::UserRule = serde_json::from_str(r#"{"id":"a","name":"Oyunlar","severity":"HIGH"}"#).unwrap();
+        r.path_pat = r"D:\Games\*".into();
+        w.rules = vec![r.clone()];
+        let out = w.run(&mut Engine::default(), 0);
+        let f = &out.findings[0];
+        assert_eq!(f.severity, Severity::High, "user intent lifts past the single-signal cap");
+        assert!(f.signals.iter().any(|s| s.rule == "user.a" && s.label.contains("Oyunlar")));
+
+        // An ignore rule silences the built-in rules too.
+        let temp = p(9200, None, "x.exe", r"C:\Users\u\AppData\Local\Temp\x.exe", SignatureState::Unsigned, None);
+        let mut w2 = World::new(vec![temp], vec![]);
+        assert_eq!(w2.run(&mut Engine::default(), 0).findings.len(), 1);
+        r.action = user_rules::Action::Ignore;
+        r.path_pat = r"*\Temp\x.exe".into();
+        w2.rules = vec![r.clone()];
+        assert!(w2.run(&mut Engine::default(), 0).findings.is_empty());
+        r.enabled = false;
+        w2.rules = vec![r];
+        assert_eq!(w2.run(&mut Engine::default(), 0).findings.len(), 1);
     }
 
     #[test]

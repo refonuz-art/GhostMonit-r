@@ -14,11 +14,13 @@ import {
   type QItem,
 } from "../../ipc/guard";
 import { useGhost } from "../../state/store";
+import { Weekly } from "./Weekly";
 import "./health.css";
 
-type Tab = "checks" | "defense" | "ext" | "net" | "block" | "quarantine";
+type Tab = "checks" | "weekly" | "defense" | "ext" | "net" | "block" | "quarantine";
 const TABS: [Tab, string][] = [
   ["checks", "Kontrol listesi"],
+  ["weekly", "Haftalık fark"],
   ["defense", "Koruma"],
   ["ext", "Tarayıcı uzantıları"],
   ["net", "Ağ"],
@@ -572,6 +574,7 @@ export default function Health() {
           </div>
         )}
         {tab === "checks" && <Checks g={g} />}
+        {tab === "weekly" && <Weekly />}
         {tab === "defense" && <Defense g={g} />}
         {tab === "ext" && <Extensions g={g} />}
         {tab === "net" && <Network g={g} />}

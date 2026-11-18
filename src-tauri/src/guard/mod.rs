@@ -5,6 +5,7 @@
 pub mod browser;
 pub mod canary;
 pub mod defender;
+pub mod dnslog;
 pub mod eventlog;
 pub mod firewall;
 pub mod health;

@@ -33,4 +33,6 @@ pub struct Shared {
     pub drives: RwLock<Vec<crate::watchers::DriveInfo>>,
     pub guard: RwLock<crate::guard::GuardState>,
     pub net_usage: RwLock<crate::guard::netstats::NetUsage>,
+    pub user_rules: RwLock<Vec<crate::engine::user_rules::UserRule>>,
+    pub dns: RwLock<crate::guard::dnslog::DnsStatus>,
 }

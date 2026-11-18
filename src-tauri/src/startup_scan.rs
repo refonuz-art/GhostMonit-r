@@ -406,6 +406,9 @@ mod tests {
             .execute_batch(
                 "DROP TABLE startup_items;
                  DROP TABLE quarantine;
+                 DROP TABLE proc_history;
+                 DROP TABLE dns_log;
+                 DROP TABLE health_history;
                  CREATE TABLE startup_items (id TEXT PRIMARY KEY, kind TEXT NOT NULL, name TEXT NOT NULL,
                    command TEXT NOT NULL, location TEXT NOT NULL, first_seen INTEGER NOT NULL,
                    last_seen INTEGER NOT NULL, removed_at INTEGER);

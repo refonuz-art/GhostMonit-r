@@ -116,6 +116,49 @@ const MIGRATIONS: &[&str] = &[
         created_at  INTEGER NOT NULL
     );
     "#,
+    // v4 — process time machine, DNS query log, daily health score
+    r#"
+    CREATE TABLE proc_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pid INTEGER NOT NULL,
+        ppid INTEGER,
+        name TEXT NOT NULL,
+        exe TEXT,
+        cmd TEXT,
+        user TEXT,
+        sig_state TEXT NOT NULL DEFAULT 'pending',
+        publisher TEXT,
+        started INTEGER NOT NULL,
+        ended INTEGER,
+        -- 1 = Ghost Monitor was not running when the process ended; 'ended' is when we noticed.
+        ended_approx INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX idx_ph_started ON proc_history(started);
+    CREATE INDEX idx_ph_ended ON proc_history(ended);
+    CREATE INDEX idx_ph_exe ON proc_history(exe);
+
+    CREATE TABLE dns_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        qtype INTEGER NOT NULL,
+        status INTEGER,
+        pid INTEGER,
+        process TEXT,
+        exe TEXT,
+        results TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL
+    );
+    CREATE INDEX idx_dns_ts ON dns_log(ts);
+    CREATE INDEX idx_dns_name ON dns_log(name);
+
+    CREATE TABLE health_history (
+        day TEXT PRIMARY KEY,
+        score INTEGER NOT NULL,
+        checks TEXT NOT NULL,
+        ts INTEGER NOT NULL
+    );
+    "#,
 ];
 
 pub struct Store {
@@ -224,6 +267,8 @@ impl Store {
     pub fn prune_events(&self, older_than: i64) -> rusqlite::Result<usize> {
         let n = self.conn.execute("DELETE FROM events WHERE ts < ?1", [older_than])?;
         self.conn.execute("DELETE FROM conn_history WHERE ts < ?1", [older_than])?;
+        self.conn.execute("DELETE FROM proc_history WHERE ended IS NOT NULL AND ended < ?1", [older_than])?;
+        self.conn.execute("DELETE FROM dns_log WHERE ts < ?1", [older_than])?;
         Ok(n)
     }
 

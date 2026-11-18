@@ -5,17 +5,19 @@ import { ago, clock, rate, stamp } from "../../design/format";
 import { api } from "../../ipc/api";
 import { guard } from "../../ipc/guard";
 import type { ConnHistoryRow, ConnectionInfo, GeoStatus } from "../../ipc/types";
+import { DNS_TYPE, dnsStatusText, v5, type DnsRow, type DnsStatus } from "../../ipc/v5";
 import { useGhost } from "../../state/store";
 import { contactsOf, Sonar } from "../../viz/Sonar";
 import "./network.css";
 
-type Tab = "live" | "listen" | "all" | "history";
+type Tab = "live" | "listen" | "all" | "history" | "dns";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "live", label: "Kurulu bağlantılar" },
   { id: "listen", label: "Dinleyen portlar" },
   { id: "all", label: "Tüm soketler" },
   { id: "history", label: "Geçmiş" },
+  { id: "dns", label: "DNS sorguları" },
 ];
 
 const STATE_TR: Record<string, string> = {
@@ -75,6 +77,68 @@ function GeoNote({ status, onChange }: { status: GeoStatus | null; onChange: (s:
   );
 }
 
+function DnsTable({ rows, status, filtered, onProcess }: { rows: DnsRow[]; status: DnsStatus | null; filtered: boolean; onProcess: (pid: number) => void }) {
+  return (
+    <>
+      <p className="nw-dns-note">
+        {status?.mode === "etw"
+          ? "Yönetici modu: her DNS sorgusu, soran programla birlikte anında kaydediliyor (Windows ETW)."
+          : status?.mode === "cache"
+            ? "Standart yetki: Windows DNS önbelleği 15 saniyede bir okunuyor. Soran program, alan adının adresine o sırada kimin bağlandığına bakılarak bulunur; bulunamazsa boş kalır. Yönetici olarak açarsanız her sorgu programıyla kaydedilir."
+            : status?.mode === "off"
+              ? "DNS kaydı çalışmıyor."
+              : "DNS kaydı başlatılıyor…"}
+        {status?.note && <em> {status.note}</em>}
+      </p>
+      <table className="nw-table">
+        <thead>
+          <tr>
+            <th>Zaman</th>
+            <th>Alan adı</th>
+            <th>Program</th>
+            <th>Yanıt</th>
+            <th>Tür</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            const bad = dnsStatusText(r.status);
+            return (
+              <tr key={i} className={bad ? "is-dns-fail" : ""}>
+                <td className="mono dim">{stamp(r.ts)}</td>
+                <td className="mono">{r.name}</td>
+                <td>
+                  {r.pid != null && r.process ? (
+                    <button className="link" onClick={() => onProcess(r.pid!)}>
+                      {r.process}
+                    </button>
+                  ) : (
+                    <span className="dim">{r.pid != null ? `PID ${r.pid}` : "bilinmiyor"}</span>
+                  )}
+                </td>
+                <td className="mono dim nw-dns-res" title={r.results}>
+                  {bad ? <span className="nw-dns-bad">{bad}</span> : r.results || "—"}
+                </td>
+                <td className="mono dim">
+                  {DNS_TYPE[r.qtype] ?? r.qtype}
+                  {r.source === "cache" ? " · önbellek" : ""}
+                </td>
+              </tr>
+            );
+          })}
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={5} className="nw-empty">
+                {filtered ? "Aramayla eşleşen sorgu yok." : "Henüz kayıtlı DNS sorgusu yok."}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 export default function NetworkWatch() {
   const connections = useGhost((s) => s.connections);
   const series = useGhost((s) => s.series);
@@ -86,6 +150,8 @@ export default function NetworkWatch() {
   const [selected, setSelected] = useState<string | null>(null);
   const [geo, setGeo] = useState<GeoStatus | null>(null);
   const [history, setHistory] = useState<ConnHistoryRow[]>([]);
+  const [dns, setDns] = useState<DnsRow[]>([]);
+  const [dnsStatus, setDnsStatus] = useState<DnsStatus | null>(null);
 
   useEffect(() => {
     api.geoStatus().then(setGeo).catch(() => {});
@@ -95,6 +161,18 @@ export default function NetworkWatch() {
     if (tab !== "history") return;
     const t = window.setTimeout(() => api.connHistory(q, 800).then(setHistory).catch(() => {}), 200);
     return () => window.clearTimeout(t);
+  }, [tab, q]);
+
+  useEffect(() => {
+    if (tab !== "dns") return;
+    v5.dnsStatus().then(setDnsStatus, () => {});
+    const load = () => v5.dnsLog(q, undefined, undefined, 1000).then(setDns).catch(() => {});
+    const t = window.setTimeout(load, 200);
+    const iv = window.setInterval(load, 5000);
+    return () => {
+      window.clearTimeout(t);
+      window.clearInterval(iv);
+    };
   }, [tab, q]);
 
   const contacts = useMemo(() => contactsOf(connections), [connections]);
@@ -196,7 +274,7 @@ export default function NetworkWatch() {
             {TABS.map((t) => (
               <button key={t.id} className={tab === t.id ? "is-on" : ""} onClick={() => setTab(t.id)}>
                 {t.label}
-                {t.id !== "history" && (
+                {t.id !== "history" && t.id !== "dns" && (
                   <i className="mono">{t.id === "live" ? live.length : t.id === "listen" ? listen.length : connections.length}</i>
                 )}
               </button>
@@ -212,7 +290,9 @@ export default function NetworkWatch() {
         </div>
 
         <div className="nw-table-wrap">
-          {tab === "history" ? (
+          {tab === "dns" ? (
+            <DnsTable rows={dns} status={dnsStatus} filtered={!!q} onProcess={focusProcess} />
+          ) : tab === "history" ? (
             <table className="nw-table">
               <thead>
                 <tr>

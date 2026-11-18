@@ -4,8 +4,11 @@ mod commands;
 mod commands_intel;
 mod commands_guard;
 mod commands_assistant;
+mod commands_v5;
 mod engine;
 mod guard;
+mod history;
+mod weekly;
 mod intel;
 mod model;
 mod monitor;
@@ -34,6 +37,7 @@ pub fn run() {
     // Called by the uninstaller: remove the ransomware decoys we planted, then exit.
     if std::env::args().any(|a| a == "--cleanup") {
         guard::canary::remove_all();
+        guard::dnslog::stop_session();
         return;
     }
     winapi::elevation::wait_for_predecessor();
@@ -49,6 +53,7 @@ pub fn run() {
             std::fs::create_dir_all(&data_dir)?;
             let store = store::Store::open(&data_dir.join("ghost.db"))?;
             let app_settings = settings::AppSettings::load(&store);
+            let user_rules = engine::user_rules::load(&store);
 
             let mut sys = System::new()?;
             sys.refresh_cpu_all();
@@ -79,12 +84,15 @@ pub fn run() {
                 drives: RwLock::new(Vec::new()),
                 guard: RwLock::new(guard::GuardState::default()),
                 net_usage: RwLock::new(guard::netstats::NetUsage::default()),
+                user_rules: RwLock::new(user_rules),
+                dns: RwLock::new(guard::dnslog::DnsStatus::default()),
             });
             app.manage(shared.clone());
             let tx = startup_scan::spawn(app.handle().clone(), shared.clone());
             *shared.startup_rescan.lock() = Some(tx);
             watchers::spawn(app.handle().clone(), shared.clone());
             guard::spawn(app.handle().clone(), shared.clone());
+            guard::dnslog::spawn(shared.clone());
             updater::spawn(app.handle().clone(), shared.clone());
             monitor::spawn(app.handle().clone(), shared.clone());
             shell::install_tray(app.handle())?;
@@ -167,6 +175,16 @@ pub fn run() {
             commands_assistant::ayla_video_clear,
             commands_assistant::assistant_ask,
             commands_assistant::assistant_install_stt,
+            commands_v5::incident_context,
+            commands_v5::user_rules_get,
+            commands_v5::user_rules_save,
+            commands_v5::user_rule_test,
+            commands_v5::dns_status,
+            commands_v5::dns_log,
+            commands_v5::proc_at,
+            commands_v5::proc_changes,
+            commands_v5::proc_lineage,
+            commands_v5::weekly_diff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ghost Monitor");

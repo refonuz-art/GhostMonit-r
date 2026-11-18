@@ -6,10 +6,11 @@ import type { ProcessInfo } from "../../ipc/types";
 import { SEVERITIES } from "../../ipc/types";
 import { useGhost } from "../../state/store";
 import { Dossier } from "./Dossier";
+import { TimeMachine } from "./TimeMachine";
 import { buildTree, type Row } from "./tree";
 import "./process.css";
 
-type View = "tree" | "flat";
+type View = "tree" | "flat" | "time";
 type Filter = "all" | "risk" | "unsigned" | "net";
 type SortKey = "name" | "pid" | "cpu" | "memory" | "startTime" | "connections" | "risk";
 
@@ -58,9 +59,10 @@ export default function ProcessHunter() {
 
   const setQuery = (q: string) => useGhost.setState({ processQuery: q });
   const narrowing = query.trim() !== "" || filter !== "all";
-  const effectiveView: View = narrowing ? "flat" : view;
+  const effectiveView: View = view === "time" ? "time" : narrowing ? "flat" : view;
 
   const rows = useMemo<Row[]>(() => {
+    if (effectiveView === "time") return [];
     if (effectiveView === "tree") return buildTree(processes);
     const list = processes.filter((p) => matches(p, query.trim()) && passes(p, filter));
     const k = sort.key;
@@ -105,6 +107,23 @@ export default function ProcessHunter() {
 
   const focused = focusPid != null ? (processes.find((p) => p.pid === focusPid) ?? null) : null;
 
+  if (effectiveView === "time")
+    return (
+      <div className="ph">
+        <div className="ph-main">
+          <div className="ph-bar">
+            <div className="seg" aria-label="Görünüm">
+              <button onClick={() => setView("tree")}>Soy ağacı</button>
+              <button onClick={() => setView("flat")}>Liste</button>
+              <button className="is-on">Zaman makinesi</button>
+            </div>
+            <span className="ph-count mono">geçmişteki bir anın işlem ağacı</span>
+          </div>
+          <TimeMachine />
+        </div>
+      </div>
+    );
+
   return (
     <div className={`ph${focusPid != null ? " has-dossier" : ""}`}>
       <div className="ph-main">
@@ -130,6 +149,7 @@ export default function ProcessHunter() {
             <button className={effectiveView === "flat" ? "is-on" : ""} onClick={() => setView("flat")}>
               Liste
             </button>
+            <button onClick={() => setView("time")}>Zaman makinesi</button>
           </div>
           <div className="seg" aria-label="Filtre">
             {FILTERS.map((f) => (

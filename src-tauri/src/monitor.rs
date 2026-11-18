@@ -81,6 +81,7 @@ fn run(app: AppHandle, shared: Arc<Shared>) {
         .map(|f| (f.key, f.severity))
         .collect();
     let mut prev_pids: Option<HashSet<u32>> = None;
+    let mut proc_tracker = crate::history::ProcTracker::default();
     let mut hashdb_size: i64 = 0;
     let mut bad_checked: HashMap<String, Option<String>> = HashMap::new();
 
@@ -127,6 +128,18 @@ fn run(app: AppHandle, shared: Arc<Shared>) {
                 }
             }
             let mut procs = process::collect(&sys, &users, &shared.sigs, &counts);
+
+            // ---- process time machine ----
+            {
+                let st = shared.store.lock();
+                if prev_pids.is_none() {
+                    crate::history::close_stale(&st.conn, &crate::history::live_keys(&procs), now);
+                    if st.setting(crate::history::SINCE_KEY).ok().flatten().is_none() {
+                        let _ = st.set_setting(crate::history::SINCE_KEY, &now.to_string());
+                    }
+                }
+                proc_tracker.update(&st.conn, &procs, now);
+            }
 
             // ---- process start events ----
             let pids: HashSet<u32> = procs.iter().map(|p| p.pid).collect();
@@ -221,6 +234,7 @@ fn run(app: AppHandle, shared: Arc<Shared>) {
                     }
                 }
             }
+            let user_rules = shared.user_rules.read().clone();
             let out = engine.evaluate(&EngineInput {
                 processes: &procs,
                 connections: &conns,
@@ -228,6 +242,7 @@ fn run(app: AppHandle, shared: Arc<Shared>) {
                 learning,
                 trusted: &trusted,
                 bad_hash_hits: &bad_hash_hits,
+                user_rules: &user_rules,
                 now,
             });
             if !out.learned_ports.is_empty() {

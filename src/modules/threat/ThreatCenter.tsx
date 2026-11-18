@@ -10,9 +10,11 @@ import { securityLevel } from "../../state/derive";
 import { useGhost } from "../../state/store";
 import { distinct, EvidenceBar } from "./EvidenceBar";
 import { Explain } from "./Explain";
+import { Incident } from "./Incident";
+import { RuleEditor, RuleList, useUserRules } from "./UserRules";
 import "./threat.css";
 
-type Tab = "active" | "history";
+type Tab = "active" | "history" | "rules";
 
 /** What the engine actually evaluates today — shown so users know the coverage. */
 const RULES: { area: string; checks: string; live: boolean }[] = [
@@ -38,6 +40,7 @@ const RULES: { area: string; checks: string; live: boolean }[] = [
   { area: "Olay günlüğü", checks: "Şifre deneme saldırısı, yeni hesap, yönetici grubu, günlük temizleme (Security günlüğü yönetici ister)", live: true },
   { area: "Yerel ağ", checks: "Modemin donanım adresinin değişmesi (ARP zehirleme), ağa yeni cihaz katılması", live: true },
   { area: "Sürücüler", checks: "Takılan USB, harici disk ve bağlanan ISO: autorun.inf, kökteki kısayol ve programlar", live: true },
+  { area: "Kendi kurallarınız", checks: "Ad, yol, üst işlem, komut satırı, imza, yayıncı, port ve ağ koşullarıyla uyar veya yok say (Kurallarım sekmesi)", live: true },
 ];
 
 function CaseRow({ f, active, onClick }: { f: Finding; active: boolean; onClick: () => void }) {
@@ -61,9 +64,7 @@ function CaseDetail({ f, live }: { f: Finding; live: boolean }) {
   const procs = processes.filter((p) => f.pids.includes(p.pid));
   const sigs = distinct(f.signals);
   const path = f.entity.includes("\\") ? f.entity : null;
-  const [qBusy, setQBusy] = useState(false);
-  // Files (downloads, drive roots) and process images can be quarantined once nothing runs them.
-  const canQuarantine = !!path && (f.entityKind === "file" || f.entityKind === "process") && procs.length === 0;
+  const respond = (!!path && (f.entityKind === "file" || f.entityKind === "process")) || procs.length > 0;
 
   return (
     <article className={`dossier-case risk-${f.severity}`}>
@@ -91,6 +92,8 @@ function CaseDetail({ f, live }: { f: Finding; live: boolean }) {
       </section>
 
       <Explain signals={f.signals} severity={f.severity} />
+
+      {respond && <Incident f={f} live={live} />}
 
       <section>
         <h3>Etkilenen işlemler</h3>
@@ -139,23 +142,6 @@ function CaseDetail({ f, live }: { f: Finding; live: boolean }) {
             Şüphelileri dondur
           </button>
         )}
-        {canQuarantine && (
-          <button
-            className="btn"
-            disabled={qBusy}
-            title="Dosyayı yerinden kaldırıp şifreli olarak saklar; Sağlık → Karantina'dan geri yüklenebilir"
-            onClick={async () => {
-              setQBusy(true);
-              await guard.quarantineAdd(path!, f.title).then(
-                () => notify("Dosya karantinaya alındı"),
-                (e) => notify(String(e), "bad"),
-              );
-              setQBusy(false);
-            }}
-          >
-            {qBusy ? "Karantinaya alınıyor…" : "Karantinaya al"}
-          </button>
-        )}
         <button
           className="btn"
           onClick={async () => {
@@ -187,6 +173,7 @@ export default function ThreatCenter() {
   const [history, setHistory] = useState<Finding[]>([]);
   const [sel, setSel] = useState<string | null>(null);
   const [minSev, setMinSev] = useState<Severity>("LOW");
+  const rulesState = useUserRules();
 
   useEffect(() => {
     if (tab === "history") api.findingHistory(500).then(setHistory).catch(() => {});
@@ -234,24 +221,29 @@ export default function ThreatCenter() {
             <button className={tab === "history" ? "is-on" : ""} onClick={() => setTab("history")}>
               Geçmiş
             </button>
+            <button className={tab === "rules" ? "is-on" : ""} onClick={() => setTab("rules")}>
+              Kurallarım {rulesState.rules && rulesState.rules.length > 0 && <i className="mono">{rulesState.rules.length}</i>}
+            </button>
           </div>
-          <span className="dim mono">{SEV_LABEL[minSev]}+</span>
+          {tab !== "rules" && <span className="dim mono">{SEV_LABEL[minSev]}+</span>}
         </div>
         <div className="tc-cases">
-          {list.length === 0 && (
+          {tab === "rules" && <RuleList st={rulesState} />}
+          {tab !== "rules" && list.length === 0 && (
             <div className="empty">
               <strong>{tab === "active" ? "Etkin bulgu yok" : "Kayıtlı bulgu yok"}</strong>
               <span>Etkin kurallar şu an bu seviyede şüpheli davranış görmüyor.</span>
             </div>
           )}
-          {list.map((f) => (
-            <CaseRow key={f.key} f={f} active={current?.key === f.key} onClick={() => setSel(f.key)} />
-          ))}
+          {tab !== "rules" &&
+            list.map((f) => <CaseRow key={f.key} f={f} active={current?.key === f.key} onClick={() => setSel(f.key)} />)}
         </div>
       </section>
 
       <section className="tc-detail">
-        {current ? (
+        {tab === "rules" ? (
+          <RuleEditor st={rulesState} />
+        ) : current ? (
           <CaseDetail key={current.key} f={current} live={tab === "active"} />
         ) : (
           <div className="tc-rules">
